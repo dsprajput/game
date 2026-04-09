@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>16 Parchi Dhup</title>
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <main class="app-shell">
+    <section class="hero">
+      <p class="eyebrow">Multiplayer Card Game</p>
+      <h1>16 Parchi Dhup</h1>
+      <p class="hero-copy">
+        Play on one device, challenge three computer players, or create an online room and invite friends with a join link.
+      </p>
+    </section>
+
+    <section class="mode-switch panel">
+      <button id="local-tab" class="mode-btn active" type="button">Local and Computer</button>
+      <button id="online-tab" class="mode-btn" type="button">Online Room</button>
+    </section>
+
+    <section id="local-section" class="panel setup-panel">
+      <h2>Start a Local Game</h2>
+      <form id="setup-form" class="setup-form">
+        <label>
+          Game mode
+          <select id="game-mode">
+            <option value="local">Local multiplayer</option>
+            <option value="computer">1 player vs 3 computers</option>
+          </select>
+        </label>
+
+        <label>
+          Number of players
+          <input id="player-count" type="number" min="3" max="6" value="4" required>
+        </label>
+
+        <label>
+          Card types
+          <textarea id="card-types" rows="3">Ram, Laxman, Sita, Hanuman, Bharat, Shatrughna</textarea>
+        </label>
+
+        <button type="submit" class="primary-btn">Shuffle and Deal</button>
+      </form>
+      <p class="helper-text">
+        Use at least as many names as players. The first card type gets 5 cards, the others get 4 each.
+      </p>
+    </section>
+
+    <section id="online-section" class="hidden online-stack">
+      <div class="online-grid">
+        <section class="panel setup-panel">
+          <h2>Create an Online Room</h2>
+          <form id="online-create-form" class="setup-form">
+            <label>
+              Your name
+              <input id="online-player-name" type="text" placeholder="Host name" required>
+            </label>
+
+            <label>
+              Number of players
+              <input id="online-player-count" type="number" min="3" max="6" value="4" required>
+            </label>
+
+            <label>
+              Card types
+              <textarea id="online-card-types" rows="3">Ram, Laxman, Sita, Hanuman, Bharat, Shatrughna</textarea>
+            </label>
+
+            <button type="submit" class="primary-btn">Create Room</button>
+          </form>
+        </section>
+
+        <section class="panel setup-panel">
+          <h2>Join a Room</h2>
+          <form id="online-join-form" class="setup-form">
+            <label>
+              Room code
+              <input id="join-room-code" type="text" placeholder="AB12CD" required>
+            </label>
+
+            <label>
+              Your name
+              <input id="join-player-name" type="text" placeholder="Player name" required>
+            </label>
+
+            <button type="submit" class="primary-btn">Join Room</button>
+          </form>
+          <p class="helper-text">If someone sends you a link, open it here and enter your name to join.</p>
+        </section>
+      </div>
+
+      <section id="room-panel" class="panel room-panel hidden">
+        <div class="panel-head">
+          <div>
+            <p class="eyebrow">Room</p>
+            <h2 id="room-code-value">------</h2>
+          </div>
+          <button id="leave-room-btn" class="ghost-btn" type="button">Leave Room</button>
+        </div>
+
+        <p id="room-status" class="room-status">Waiting for players</p>
+
+        <label class="invite-field">
+          Invite link
+          <div class="invite-row">
+            <input id="invite-link" type="text" readonly>
+            <button id="copy-invite-btn" class="ghost-btn" type="button">Copy Link</button>
+          </div>
+        </label>
+
+        <p id="room-hint" class="helper-text"></p>
+        <div id="room-players" class="players-list"></div>
+      </section>
+    </section>
+
+    <section id="game-area" class="game-area hidden">
+      <div class="panel status-panel">
+        <div>
+          <p class="eyebrow">Current Turn</p>
+          <h2 id="turn-title">Player 1</h2>
+        </div>
+        <div class="status-meta">
+          <span id="starter-badge" class="badge"></span>
+          <span id="exchange-badge" class="badge accent"></span>
+        </div>
+      </div>
+
+      <div class="layout-grid">
+        <section class="panel players-panel">
+          <div class="panel-head">
+            <h3>Players</h3>
+            <button id="new-game-btn" class="ghost-btn" type="button">Refresh</button>
+          </div>
+          <div id="players-list" class="players-list"></div>
+        </section>
+
+        <section class="panel hand-panel">
+          <div class="panel-head">
+            <h3 id="hand-title">Hidden Hand</h3>
+            <button id="reveal-btn" class="primary-btn" type="button">Reveal Current Hand</button>
+          </div>
+
+          <div id="pass-device" class="pass-device">
+            <p>Keep hands private. Pass the device to the active player and reveal their cards when ready.</p>
+          </div>
+
+          <div id="hand-view" class="hand-view hidden">
+            <p class="helper-text">Choose one card to pass to the next player.</p>
+            <div id="cards-container" class="cards-container"></div>
+          </div>
+
+          <div id="computer-turn" class="pass-device hidden">
+            <p id="computer-turn-copy"></p>
+          </div>
+        </section>
+      </div>
+    </section>
+
+    <section id="winner-panel" class="panel winner-panel hidden">
+      <p class="eyebrow">Winner</p>
+      <h2 id="winner-title"></h2>
+      <p id="winner-copy"></p>
+    </section>
+  </main>
+
+  <script src="./app.js"></script>
+</body>
+</html>

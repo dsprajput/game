@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: four-of-a-kind
+    env: python
+    plan: starter
+    buildCommand: ""
+    startCommand: python3 server.py
+    healthCheckPath: /health
+    envVars:
+      - key: DB_PATH
+        value: /var/data/game.db
+    disk:
+      name: four-of-a-kind-data
+      mountPath: /var/data
+      sizeGB: 1
