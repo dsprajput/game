@@ -9,6 +9,7 @@ const state = {
   activePlayerIndex: 0,
   turnCount: 0,
   winner: null,
+  scores: {},
   handRevealed: false,
   gameMode: "local",
   computerTimer: null,
@@ -53,10 +54,12 @@ const gameArea = document.querySelector("#game-area");
 const winnerPanel = document.querySelector("#winner-panel");
 const winnerTitle = document.querySelector("#winner-title");
 const winnerCopy = document.querySelector("#winner-copy");
+const playAgainBtn = document.querySelector("#play-again-btn");
 const turnTitle = document.querySelector("#turn-title");
 const starterBadge = document.querySelector("#starter-badge");
 const exchangeBadge = document.querySelector("#exchange-badge");
 const playersList = document.querySelector("#players-list");
+const scoreboard = document.querySelector("#scoreboard");
 const handTitle = document.querySelector("#hand-title");
 const revealBtn = document.querySelector("#reveal-btn");
 const passDevice = document.querySelector("#pass-device");
@@ -122,6 +125,15 @@ leaveRoomBtn.addEventListener("click", () => {
   leaveOnlineRoom();
 });
 
+playAgainBtn.addEventListener("click", async () => {
+  if (state.mode === "online" && state.remote.roomId) {
+    await replayOnlineRoom();
+    return;
+  }
+
+  replayLocalGame();
+});
+
 gameModeInput.addEventListener("change", () => {
   const isComputerMode = gameModeInput.value === "computer";
   playerCountInput.value = isComputerMode ? "4" : playerCountInput.value;
@@ -139,6 +151,11 @@ function switchMode(mode) {
 }
 
 function startLocalGame() {
+  state.scores = {};
+  setupLocalRound({ resetScores: true });
+}
+
+function setupLocalRound({ resetScores = false } = {}) {
   clearComputerTurn();
   stopPolling();
 
@@ -167,12 +184,23 @@ function startLocalGame() {
     return;
   }
 
-  state.players = hands.map((hand, index) => ({
-    id: `local-${index + 1}`,
-    name: gameMode === "computer" && index > 0 ? `Computer ${index}` : `Player ${index + 1}`,
-    hand,
-    isComputer: gameMode === "computer" && index > 0,
-  }));
+  state.players = hands.map((hand, index) => {
+    const id = `local-${index + 1}`;
+    const name = gameMode === "computer" && index > 0 ? `Computer ${index}` : `Player ${index + 1}`;
+
+    if (resetScores || !state.scores[id]) {
+      state.scores[id] = { name, wins: 0 };
+    } else {
+      state.scores[id].name = name;
+    }
+
+    return {
+      id,
+      name,
+      hand,
+      isComputer: gameMode === "computer" && index > 0,
+    };
+  });
   state.starterIndex = starterIndex;
   state.activePlayerIndex = starterIndex;
   state.turnCount = 1;
@@ -185,6 +213,11 @@ function startLocalGame() {
   playShuffleSound();
   render();
   maybeRunComputerTurn();
+}
+
+function replayLocalGame() {
+  winnerPanel.classList.add("hidden");
+  setupLocalRound();
 }
 
 async function createOnlineRoom() {
@@ -305,6 +338,7 @@ function leaveOnlineRoom() {
   clearSavedRoomPlayer(currentRoomId);
   state.players = [];
   state.winner = null;
+  state.scores = {};
   state.handRevealed = false;
   roomPanel.classList.add("hidden");
   gameArea.classList.add("hidden");
@@ -346,6 +380,9 @@ function applyRemoteState(data) {
   state.remote.playerCount = data.playerCount;
   state.remote.cardTypes = data.cardTypes;
   state.players = data.players;
+  state.scores = Object.fromEntries(
+    data.players.map((player) => [player.id, { name: player.name, wins: player.score ?? 0 }]),
+  );
   state.starterIndex = data.starterIndex ?? 0;
   state.activePlayerIndex = data.activePlayerIndex ?? 0;
   state.turnCount = data.turnCount ?? 0;
@@ -355,7 +392,7 @@ function applyRemoteState(data) {
   gameArea.classList.remove("hidden");
   winnerPanel.classList.toggle("hidden", !data.winner);
 
-  if (previousStatus === "waiting" && data.status === "playing") {
+  if ((previousStatus === "waiting" || previousStatus === "finished") && data.status === "playing") {
     playShuffleSound();
   }
 
@@ -421,6 +458,24 @@ async function handleRemotePass(cardId) {
   }
 
   playPassSound();
+  applyRemoteState(response.data);
+  ensurePolling();
+}
+
+async function replayOnlineRoom() {
+  const response = await apiRequest(`/api/rooms/${state.remote.roomId}/replay`, {
+    method: "POST",
+    headers: {
+      "X-Player-Token": state.remote.playerToken,
+    },
+  });
+
+  if (!response.ok) {
+    window.alert(response.error || "Could not start a new round.");
+    return;
+  }
+
+  winnerPanel.classList.add("hidden");
   applyRemoteState(response.data);
   ensurePolling();
 }
@@ -549,8 +604,27 @@ function render() {
   }
 
   renderStatus();
+  renderScores();
   renderPlayers();
   renderHand();
+}
+
+function renderScores() {
+  scoreboard.innerHTML = "";
+
+  const entries = Object.entries(state.scores)
+    .map(([id, score]) => ({ id, ...score }))
+    .sort((left, right) => right.wins - left.wins || left.name.localeCompare(right.name));
+
+  entries.forEach((entry) => {
+    const row = document.createElement("div");
+    row.className = "score-row";
+    row.innerHTML = `
+      <strong>${entry.name}${state.mode === "online" && entry.id === state.remote.playerId ? " (You)" : ""}</strong>
+      <span class="score-value">${entry.wins}</span>
+    `;
+    scoreboard.appendChild(row);
+  });
 }
 
 function renderStatus() {
@@ -735,6 +809,9 @@ function passCard(cardId) {
   const winningPlayer = state.players.find((player) => hasFourOfAKind(player.hand));
 
   if (winningPlayer) {
+    if (state.scores[winningPlayer.id]) {
+      state.scores[winningPlayer.id].wins += 1;
+    }
     state.winner = {
       id: winningPlayer.id,
       name: winningPlayer.name,

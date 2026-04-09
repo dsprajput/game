@@ -77,7 +77,8 @@ h1 {
 .setup-panel,
 .winner-panel,
 .status-panel,
-.room-panel {
+.room-panel,
+.score-panel {
   padding: 24px;
 }
 
@@ -204,6 +205,37 @@ button:disabled {
 .game-area {
   display: grid;
   gap: 20px;
+}
+
+.scoreboard {
+  display: grid;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.score-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 12px;
+  align-items: center;
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.58);
+  border: 1px solid var(--border);
+}
+
+.score-row strong {
+  font-size: 1rem;
+}
+
+.score-value {
+  min-width: 42px;
+  text-align: center;
+  border-radius: 999px;
+  padding: 6px 12px;
+  background: rgba(191, 91, 44, 0.12);
+  color: #75350f;
+  font-weight: 700;
 }
 
 .status-panel,
@@ -411,6 +443,10 @@ button:disabled {
 .winner-panel h2 {
   margin-top: 8px;
   font-size: clamp(2rem, 4vw, 3rem);
+}
+
+.winner-panel .primary-btn {
+  margin-top: 18px;
 }
 
 .hidden {

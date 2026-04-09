@@ -117,6 +117,14 @@
     </section>
 
     <section id="game-area" class="game-area hidden">
+      <section class="panel score-panel">
+        <div class="panel-head">
+          <h3>Session Score</h3>
+          <span class="helper-text">Wins across rounds</span>
+        </div>
+        <div id="scoreboard" class="scoreboard"></div>
+      </section>
+
       <div class="panel status-panel">
         <div>
           <p class="eyebrow">Current Turn</p>
@@ -163,6 +171,7 @@
       <p class="eyebrow">Winner</p>
       <h2 id="winner-title"></h2>
       <p id="winner-copy"></p>
+      <button id="play-again-btn" class="primary-btn" type="button">Play Again</button>
     </section>
   </main>
 

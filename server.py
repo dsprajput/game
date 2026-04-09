@@ -68,6 +68,7 @@ def init_db():
                 name TEXT NOT NULL,
                 session_token TEXT NOT NULL UNIQUE,
                 seat_index INTEGER NOT NULL,
+                score INTEGER NOT NULL DEFAULT 0,
                 hand_json TEXT NOT NULL DEFAULT '[]',
                 joined_at REAL NOT NULL,
                 last_seen_at REAL NOT NULL,
@@ -75,6 +76,9 @@ def init_db():
             )
             """
         )
+        columns = [row["name"] for row in CONN.execute("PRAGMA table_info(players)").fetchall()]
+        if "score" not in columns:
+            CONN.execute("ALTER TABLE players ADD COLUMN score INTEGER NOT NULL DEFAULT 0")
 
 
 def now_ts():
@@ -237,6 +241,7 @@ def serialize_room(room, players, current_player, handler):
         public_player = {
             "id": player["id"],
             "name": player["name"],
+            "score": player["score"],
             "cardCount": len(hand),
             "handSummary": "Hand hidden" if player["id"] != current_player["id"] and room["status"] != "finished" else summarize_hand(hand),
         }
@@ -302,6 +307,41 @@ def start_room_if_ready(room_id):
         )
 
 
+def restart_room(room_id):
+    room_bundle = get_room(room_id)
+    if room_bundle is None:
+        return None
+
+    room, players = room_bundle
+    card_types = json.loads(room["card_types_json"])
+    starter_index = random.randrange(room["player_count"])
+    hands = deal_hands(room["player_count"], card_types, starter_index)
+    updated_at = now_ts()
+
+    with CONN:
+        for player, hand in zip(players, hands):
+            CONN.execute(
+                "UPDATE players SET hand_json = ?, last_seen_at = ? WHERE id = ?",
+                (json.dumps(hand), updated_at, player["id"]),
+            )
+        CONN.execute(
+            """
+            UPDATE rooms
+            SET status = 'playing',
+                starter_index = ?,
+                active_player_index = ?,
+                turn_count = 1,
+                winner_player_id = NULL,
+                winner_type = NULL,
+                updated_at = ?
+            WHERE id = ?
+            """,
+            (starter_index, starter_index, updated_at, room_id),
+        )
+
+    return get_room(room_id)
+
+
 def authenticated_player(handler, room_id):
     token = handler.headers.get("X-Player-Token", "").strip()
     if not token:
@@ -360,6 +400,11 @@ class GameHandler(BaseHTTPRequestHandler):
             parts = parsed.path.strip("/").split("/")
             if len(parts) >= 4:
                 return self.handle_pass_card(parts[2])
+
+        if parsed.path.startswith("/api/rooms/") and parsed.path.endswith("/replay"):
+            parts = parsed.path.strip("/").split("/")
+            if len(parts) >= 4:
+                return self.handle_replay_room(parts[2])
 
         self.send_error(HTTPStatus.NOT_FOUND)
 
@@ -552,6 +597,10 @@ class GameHandler(BaseHTTPRequestHandler):
                 )
                 if winner_player_id:
                     CONN.execute(
+                        "UPDATE players SET score = score + 1 WHERE id = ?",
+                        (winner_player_id,),
+                    )
+                    CONN.execute(
                         """
                         UPDATE rooms
                         SET status = 'finished',
@@ -573,6 +622,27 @@ class GameHandler(BaseHTTPRequestHandler):
                     )
 
             updated_room, updated_players = get_room(room_id)
+            current_player = next(row for row in updated_players if row["id"] == player["id"])
+            response = serialize_room(updated_room, updated_players, current_player, self)
+
+        self.send_json(response)
+
+    def handle_replay_room(self, room_id):
+        with db_lock:
+            room_bundle = get_room(room_id)
+            if room_bundle is None:
+                return self.send_json({"error": "Room not found."}, HTTPStatus.NOT_FOUND)
+
+            room, players = room_bundle
+            player, error = authenticated_player(self, room_id)
+            if error:
+                return self.send_json({"error": error}, HTTPStatus.FORBIDDEN)
+            if room["status"] != "finished":
+                return self.send_json({"error": "You can replay only after the round ends."}, HTTPStatus.BAD_REQUEST)
+            if len(players) < room["player_count"]:
+                return self.send_json({"error": "Room is missing players for a new round."}, HTTPStatus.BAD_REQUEST)
+
+            updated_room, updated_players = restart_room(room_id)
             current_player = next(row for row in updated_players if row["id"] == player["id"])
             response = serialize_room(updated_room, updated_players, current_player, self)
 
