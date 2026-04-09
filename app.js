@@ -37,6 +37,8 @@ const playerCountInput = document.querySelector("#player-count");
 const cardTypesInput = document.querySelector("#card-types");
 const onlineCreateForm = document.querySelector("#online-create-form");
 const onlineJoinForm = document.querySelector("#online-join-form");
+const onlineCreateBtn = onlineCreateForm.querySelector('button[type="submit"]');
+const onlineJoinBtn = onlineJoinForm.querySelector('button[type="submit"]');
 const onlinePlayerNameInput = document.querySelector("#online-player-name");
 const onlinePlayerCountInput = document.querySelector("#online-player-count");
 const onlineCardTypesInput = document.querySelector("#online-card-types");
@@ -221,6 +223,10 @@ function replayLocalGame() {
 }
 
 async function createOnlineRoom() {
+  if (onlineCreateBtn.disabled) {
+    return;
+  }
+
   clearComputerTurn();
   const playerName = onlinePlayerNameInput.value.trim();
   const playerCount = Number(onlinePlayerCountInput.value);
@@ -241,6 +247,7 @@ async function createOnlineRoom() {
     return;
   }
 
+  setButtonBusy(onlineCreateBtn, true, "Creating...");
   const response = await apiRequest("/api/rooms", {
     method: "POST",
     body: {
@@ -249,6 +256,7 @@ async function createOnlineRoom() {
       cardTypes: cardTypes.slice(0, playerCount),
     },
   });
+  setButtonBusy(onlineCreateBtn, false, "Create Room");
 
   if (!response.ok) {
     window.alert(response.error || "Could not create room.");
@@ -271,19 +279,31 @@ async function createOnlineRoom() {
 }
 
 async function joinOnlineRoom() {
+  if (onlineJoinBtn.disabled) {
+    return;
+  }
+
   clearComputerTurn();
   const roomId = sanitizeRoomId(joinRoomCodeInput.value);
   const playerName = joinPlayerNameInput.value.trim();
+  const saved = getSavedRoomPlayer(roomId);
 
   if (!roomId || !playerName) {
     window.alert("Enter the room code and your name.");
     return;
   }
 
+  setButtonBusy(onlineJoinBtn, true, "Joining...");
   const response = await apiRequest(`/api/rooms/${roomId}/join`, {
     method: "POST",
+    headers: saved?.playerToken
+      ? {
+          "X-Player-Token": saved.playerToken,
+        }
+      : {},
     body: { playerName },
   });
+  setButtonBusy(onlineJoinBtn, false, "Join Room");
 
   if (!response.ok) {
     window.alert(response.error || "Could not join room.");
@@ -302,6 +322,11 @@ async function joinOnlineRoom() {
   });
   history.replaceState({}, "", buildRoomUrl(roomId));
   await fetchRoomState();
+}
+
+function setButtonBusy(button, isBusy, label) {
+  button.disabled = isBusy;
+  button.textContent = label;
 }
 
 function connectToRoom({ roomId, playerId, playerToken, playerName, inviteUrl, playerCount, cardTypes, isHost }) {

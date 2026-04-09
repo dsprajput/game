@@ -359,6 +359,17 @@ def authenticated_player(handler, room_id):
     return player, None
 
 
+def player_response(handler, room_row, player_row):
+    return {
+        "roomId": room_row["id"],
+        "playerId": player_row["id"],
+        "playerToken": player_row["session_token"],
+        "playerCount": room_row["player_count"],
+        "cardTypes": json.loads(room_row["card_types_json"]),
+        "inviteUrl": room_invite_url(handler, room_row["id"]),
+    }
+
+
 class GameHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         if rate_limited(client_ip(self)):
@@ -489,10 +500,15 @@ class GameHandler(BaseHTTPRequestHandler):
                 return self.send_json({"error": "Room not found."}, HTTPStatus.NOT_FOUND)
 
             room, players = room_bundle
+            existing_player, _ = authenticated_player(self, room_id)
+            if existing_player is not None:
+                return self.send_json(player_response(self, room, existing_player))
             if room["status"] != "waiting":
                 return self.send_json({"error": "This room has already started."}, HTTPStatus.BAD_REQUEST)
             if len(players) >= room["player_count"]:
                 return self.send_json({"error": "This room is already full."}, HTTPStatus.BAD_REQUEST)
+            if any(player["name"].strip().lower() == player_name.lower() for player in players):
+                return self.send_json({"error": "That name is already taken in this room."}, HTTPStatus.BAD_REQUEST)
 
             player_id = random_id()
             session_token = random_token()
@@ -510,14 +526,8 @@ class GameHandler(BaseHTTPRequestHandler):
             start_room_if_ready(room_id)
 
         room_row = CONN.execute("SELECT * FROM rooms WHERE id = ?", (room_id,)).fetchone()
-        self.send_json({
-            "roomId": room_id,
-            "playerId": player_id,
-            "playerToken": session_token,
-            "playerCount": room_row["player_count"],
-            "cardTypes": json.loads(room_row["card_types_json"]),
-            "inviteUrl": room_invite_url(self, room_id),
-        })
+        player_row = CONN.execute("SELECT * FROM players WHERE id = ?", (player_id,)).fetchone()
+        self.send_json(player_response(self, room_row, player_row))
 
     def handle_get_room_state(self, room_id):
         with db_lock:
