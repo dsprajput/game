@@ -76,6 +76,22 @@ def init_db():
             )
             """
         )
+        CONN.execute(
+            """
+            CREATE TABLE IF NOT EXISTS messages (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                room_id TEXT NOT NULL,
+                player_id TEXT NOT NULL,
+                player_name TEXT NOT NULL,
+                text TEXT NOT NULL DEFAULT '',
+                emoji TEXT NOT NULL DEFAULT '',
+                reaction TEXT NOT NULL DEFAULT 'message',
+                created_at REAL NOT NULL,
+                FOREIGN KEY (room_id) REFERENCES rooms(id),
+                FOREIGN KEY (player_id) REFERENCES players(id)
+            )
+            """
+        )
         columns = [row["name"] for row in CONN.execute("PRAGMA table_info(players)").fetchall()]
         if "score" not in columns:
             CONN.execute("ALTER TABLE players ADD COLUMN score INTEGER NOT NULL DEFAULT 0")
@@ -234,7 +250,42 @@ def get_room(room_id):
     return room, players
 
 
+def get_room_messages(room_id, limit=30):
+    rows = CONN.execute(
+        """
+        SELECT * FROM messages
+        WHERE room_id = ?
+        ORDER BY id DESC
+        LIMIT ?
+        """,
+        (room_id, limit),
+    ).fetchall()
+    return list(reversed(rows))
+
+
+def format_message(row):
+    created_at = time.localtime(row["created_at"])
+    reaction_map = {
+        "message": "Message",
+        "laughter": "laughed",
+        "sad": "felt sad",
+        "angry": "got angry",
+        "clap": "clapped",
+    }
+    return {
+        "id": row["id"],
+        "playerId": row["player_id"],
+        "playerName": row["player_name"],
+        "text": row["text"],
+        "emoji": row["emoji"],
+        "reaction": row["reaction"],
+        "reactionLabel": reaction_map.get(row["reaction"], "reacted"),
+        "timeLabel": time.strftime("%H:%M", created_at),
+    }
+
+
 def serialize_room(room, players, current_player, handler):
+    messages = [format_message(row) for row in get_room_messages(room["id"])]
     public_players = []
     for player in players:
         hand = json.loads(player["hand_json"])
@@ -270,6 +321,7 @@ def serialize_room(room, players, current_player, handler):
         "activePlayerIndex": room["active_player_index"],
         "turnCount": room["turn_count"],
         "winner": winner,
+        "messages": messages,
         "inviteUrl": room_invite_url(handler, room["id"]),
         "serverTime": int(now_ts()),
     }
@@ -416,6 +468,11 @@ class GameHandler(BaseHTTPRequestHandler):
             parts = parsed.path.strip("/").split("/")
             if len(parts) >= 4:
                 return self.handle_replay_room(parts[2])
+
+        if parsed.path.startswith("/api/rooms/") and parsed.path.endswith("/messages"):
+            parts = parsed.path.strip("/").split("/")
+            if len(parts) >= 4:
+                return self.handle_room_message(parts[2])
 
         self.send_error(HTTPStatus.NOT_FOUND)
 
@@ -653,6 +710,46 @@ class GameHandler(BaseHTTPRequestHandler):
                 return self.send_json({"error": "Room is missing players for a new round."}, HTTPStatus.BAD_REQUEST)
 
             updated_room, updated_players = restart_room(room_id)
+            current_player = next(row for row in updated_players if row["id"] == player["id"])
+            response = serialize_room(updated_room, updated_players, current_player, self)
+
+        self.send_json(response)
+
+    def handle_room_message(self, room_id):
+        try:
+            payload = read_json(self)
+        except ValueError as error:
+            return self.send_json({"error": str(error)}, HTTPStatus.BAD_REQUEST)
+
+        text = str(payload.get("text", "")).strip()[:120]
+        emoji = str(payload.get("emoji", "")).strip()[:8]
+        reaction = str(payload.get("reaction", "message")).strip()[:20] or "message"
+
+        if not text and not emoji:
+            return self.send_json({"error": "Message is empty."}, HTTPStatus.BAD_REQUEST)
+
+        with db_lock:
+            room_bundle = get_room(room_id)
+            if room_bundle is None:
+                return self.send_json({"error": "Room not found."}, HTTPStatus.NOT_FOUND)
+
+            room, players = room_bundle
+            player, error = authenticated_player(self, room_id)
+            if error:
+                return self.send_json({"error": error}, HTTPStatus.FORBIDDEN)
+
+            updated_at = now_ts()
+            with CONN:
+                CONN.execute(
+                    """
+                    INSERT INTO messages (room_id, player_id, player_name, text, emoji, reaction, created_at)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                    """,
+                    (room_id, player["id"], player["name"], text, emoji, reaction, updated_at),
+                )
+                CONN.execute("UPDATE rooms SET updated_at = ? WHERE id = ?", (updated_at, room_id))
+
+            updated_room, updated_players = get_room(room_id)
             current_player = next(row for row in updated_players if row["id"] == player["id"])
             response = serialize_room(updated_room, updated_players, current_player, self)
 

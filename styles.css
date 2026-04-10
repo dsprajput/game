@@ -78,7 +78,8 @@ h1 {
 .winner-panel,
 .status-panel,
 .room-panel,
-.score-panel {
+.score-panel,
+.chat-panel {
   padding: 24px;
 }
 
@@ -205,6 +206,64 @@ button:disabled {
 .game-area {
   display: grid;
   gap: 20px;
+}
+
+.chat-panel {
+  display: grid;
+  gap: 16px;
+}
+
+.reaction-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.emoji-btn {
+  padding: 10px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.72);
+  color: var(--ink);
+}
+
+.chat-messages {
+  display: grid;
+  gap: 10px;
+  max-height: 260px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.chat-message {
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.62);
+  border: 1px solid var(--border);
+}
+
+.chat-message strong {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 0.95rem;
+}
+
+.chat-message p {
+  margin: 0;
+  color: var(--ink);
+  line-height: 1.45;
+}
+
+.chat-meta {
+  margin-top: 6px;
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.chat-form {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 12px;
 }
 
 .scoreboard {
@@ -467,6 +526,10 @@ button:disabled {
   }
 
   .invite-row {
+    grid-template-columns: 1fr;
+  }
+
+  .chat-form {
     grid-template-columns: 1fr;
   }
 

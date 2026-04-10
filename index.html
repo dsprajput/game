@@ -165,6 +165,27 @@
           </div>
         </section>
       </div>
+
+      <section id="chat-panel" class="panel chat-panel hidden">
+        <div class="panel-head">
+          <h3>Room Chat</h3>
+          <span class="helper-text">Messages and reactions</span>
+        </div>
+
+        <div class="reaction-row">
+          <button class="emoji-btn" type="button" data-emoji="😂" data-reaction="laughter">😂 Laugh</button>
+          <button class="emoji-btn" type="button" data-emoji="😢" data-reaction="sad">😢 Sad</button>
+          <button class="emoji-btn" type="button" data-emoji="😠" data-reaction="angry">😠 Angry</button>
+          <button class="emoji-btn" type="button" data-emoji="👏" data-reaction="clap">👏 Clap</button>
+        </div>
+
+        <div id="chat-messages" class="chat-messages"></div>
+
+        <form id="chat-form" class="chat-form">
+          <input id="chat-input" type="text" maxlength="120" placeholder="Type a message to the room">
+          <button id="chat-send-btn" class="primary-btn" type="submit">Send</button>
+        </form>
+      </section>
     </section>
 
     <section id="winner-panel" class="panel winner-panel hidden">

@@ -21,6 +21,8 @@ const state = {
     inviteUrl: "",
     playerCount: 0,
     cardTypes: [],
+    messages: [],
+    lastSeenMessageId: null,
     status: "idle",
     pollTimer: null,
     isHost: false,
@@ -39,6 +41,12 @@ const onlineCreateForm = document.querySelector("#online-create-form");
 const onlineJoinForm = document.querySelector("#online-join-form");
 const onlineCreateBtn = onlineCreateForm.querySelector('button[type="submit"]');
 const onlineJoinBtn = onlineJoinForm.querySelector('button[type="submit"]');
+const chatPanel = document.querySelector("#chat-panel");
+const chatMessages = document.querySelector("#chat-messages");
+const chatForm = document.querySelector("#chat-form");
+const chatInput = document.querySelector("#chat-input");
+const chatSendBtn = document.querySelector("#chat-send-btn");
+const emojiButtons = document.querySelectorAll(".emoji-btn");
 const onlinePlayerNameInput = document.querySelector("#online-player-name");
 const onlinePlayerCountInput = document.querySelector("#online-player-count");
 const onlineCardTypesInput = document.querySelector("#online-card-types");
@@ -87,6 +95,17 @@ onlineCreateForm.addEventListener("submit", async (event) => {
 onlineJoinForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   await joinOnlineRoom();
+});
+
+chatForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  await sendChatMessage();
+});
+
+emojiButtons.forEach((button) => {
+  button.addEventListener("click", async () => {
+    await sendReaction(button.dataset.emoji, button.dataset.reaction);
+  });
 });
 
 revealBtn.addEventListener("click", () => {
@@ -339,6 +358,8 @@ function connectToRoom({ roomId, playerId, playerToken, playerName, inviteUrl, p
   state.remote.inviteUrl = inviteUrl;
   state.remote.playerCount = playerCount;
   state.remote.cardTypes = cardTypes;
+  state.remote.messages = [];
+  state.remote.lastSeenMessageId = null;
   state.remote.status = "waiting";
   state.remote.isHost = isHost;
   saveRoomPlayer(roomId, playerId, playerToken, playerName);
@@ -356,6 +377,8 @@ function leaveOnlineRoom() {
     inviteUrl: "",
     playerCount: 0,
     cardTypes: [],
+    messages: [],
+    lastSeenMessageId: null,
     status: "idle",
     pollTimer: null,
     isHost: false,
@@ -404,6 +427,7 @@ function applyRemoteState(data) {
   state.remote.inviteUrl = data.inviteUrl;
   state.remote.playerCount = data.playerCount;
   state.remote.cardTypes = data.cardTypes;
+  state.remote.messages = data.messages || [];
   state.players = data.players;
   state.scores = Object.fromEntries(
     data.players.map((player) => [player.id, { name: player.name, wins: player.score ?? 0 }]),
@@ -416,6 +440,7 @@ function applyRemoteState(data) {
   roomPanel.classList.remove("hidden");
   gameArea.classList.remove("hidden");
   winnerPanel.classList.toggle("hidden", !data.winner);
+  chatPanel.classList.toggle("hidden", state.mode !== "online" || !state.remote.roomId);
 
   if ((previousStatus === "waiting" || previousStatus === "finished") && data.status === "playing") {
     playShuffleSound();
@@ -424,6 +449,8 @@ function applyRemoteState(data) {
   if (!previousWinner && data.winner) {
     playWinSound();
   }
+
+  handleIncomingMessages(data.messages || []);
 
   if (data.winner) {
     winnerTitle.textContent = `${data.winner.name} wins!`;
@@ -505,6 +532,80 @@ async function replayOnlineRoom() {
   ensurePolling();
 }
 
+async function sendChatMessage() {
+  const text = chatInput.value.trim();
+
+  if (!text || !state.remote.roomId) {
+    return;
+  }
+
+  setButtonBusy(chatSendBtn, true, "Sending...");
+  const response = await apiRequest(`/api/rooms/${state.remote.roomId}/messages`, {
+    method: "POST",
+    headers: {
+      "X-Player-Token": state.remote.playerToken,
+    },
+    body: {
+      text,
+      emoji: "",
+      reaction: "message",
+    },
+  });
+  setButtonBusy(chatSendBtn, false, "Send");
+
+  if (!response.ok) {
+    window.alert(response.error || "Could not send message.");
+    return;
+  }
+
+  chatInput.value = "";
+  applyRemoteState(response.data);
+  ensurePolling();
+}
+
+async function sendReaction(emoji, reaction) {
+  if (!state.remote.roomId) {
+    return;
+  }
+
+  const response = await apiRequest(`/api/rooms/${state.remote.roomId}/messages`, {
+    method: "POST",
+    headers: {
+      "X-Player-Token": state.remote.playerToken,
+    },
+    body: {
+      text: "",
+      emoji,
+      reaction,
+    },
+  });
+
+  if (!response.ok) {
+    window.alert(response.error || "Could not send reaction.");
+    return;
+  }
+
+  applyRemoteState(response.data);
+  ensurePolling();
+}
+
+function handleIncomingMessages(messages) {
+  const lastSeenId = state.remote.lastSeenMessageId;
+  const newMessages = lastSeenId
+    ? messages.filter((message) => message.id > lastSeenId)
+    : [];
+
+  newMessages.forEach((message) => {
+    if (message.playerId === state.remote.playerId) {
+      return;
+    }
+
+    playChatSound(message.reaction);
+  });
+
+  state.remote.lastSeenMessageId = messages.length ? messages[messages.length - 1].id : lastSeenId;
+}
+
 function getAudioContext() {
   const AudioContextClass = window.AudioContext || window.webkitAudioContext;
 
@@ -563,6 +664,34 @@ function playWinSound() {
   playTone({ frequency: 659.25, duration: 0.12, type: "triangle", volume: 0.04, delay: 0.12 });
   playTone({ frequency: 783.99, duration: 0.18, type: "triangle", volume: 0.045, delay: 0.24 });
   playTone({ frequency: 1046.5, duration: 0.28, type: "triangle", volume: 0.05, delay: 0.4 });
+}
+
+function playChatSound(reaction) {
+  if (reaction === "laughter") {
+    playTone({ frequency: 720, duration: 0.08, type: "triangle", volume: 0.03, delay: 0 });
+    playTone({ frequency: 880, duration: 0.08, type: "triangle", volume: 0.03, delay: 0.08 });
+    return;
+  }
+
+  if (reaction === "sad") {
+    playTone({ frequency: 420, duration: 0.14, type: "sine", volume: 0.028, delay: 0 });
+    playTone({ frequency: 320, duration: 0.18, type: "sine", volume: 0.028, delay: 0.12 });
+    return;
+  }
+
+  if (reaction === "angry") {
+    playTone({ frequency: 260, duration: 0.06, type: "square", volume: 0.028, delay: 0 });
+    playTone({ frequency: 220, duration: 0.1, type: "square", volume: 0.03, delay: 0.05 });
+    return;
+  }
+
+  if (reaction === "clap") {
+    playTone({ frequency: 900, duration: 0.04, type: "square", volume: 0.025, delay: 0 });
+    playTone({ frequency: 900, duration: 0.04, type: "square", volume: 0.025, delay: 0.08 });
+    return;
+  }
+
+  playTone({ frequency: 600, duration: 0.07, type: "triangle", volume: 0.022, delay: 0 });
 }
 
 function parseCardTypes(input) {
@@ -632,6 +761,7 @@ function render() {
   renderScores();
   renderPlayers();
   renderHand();
+  renderChat();
 }
 
 function renderScores() {
@@ -650,6 +780,29 @@ function renderScores() {
     `;
     scoreboard.appendChild(row);
   });
+}
+
+function renderChat() {
+  if (state.mode !== "online" || !state.remote.roomId) {
+    chatPanel.classList.add("hidden");
+    return;
+  }
+
+  chatPanel.classList.remove("hidden");
+  chatMessages.innerHTML = "";
+
+  state.remote.messages.forEach((message) => {
+    const item = document.createElement("article");
+    item.className = "chat-message";
+    item.innerHTML = `
+      <strong>${message.playerName}${message.playerId === state.remote.playerId ? " (You)" : ""}</strong>
+      <p>${message.emoji ? `${message.emoji} ` : ""}${message.text || message.reactionLabel}</p>
+      <div class="chat-meta">${message.timeLabel}</div>
+    `;
+    chatMessages.appendChild(item);
+  });
+
+  chatMessages.scrollTop = chatMessages.scrollHeight;
 }
 
 function renderStatus() {
