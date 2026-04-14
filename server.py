@@ -14,7 +14,6 @@ from urllib.parse import urlparse
 
 ROOT = Path(__file__).resolve().parent
 DB_PATH = Path(os.environ.get("DB_PATH", str(ROOT / "game.db")))
-PREFERRED_HOST = os.environ.get("PREFERRED_HOST", "16parchidhup.in").strip().lower()
 DEFAULT_CARD_TYPES = ["Ram", "Laxman", "Sita", "Hanuman", "Bharat", "Shatrughna"]
 STATIC_FILES = {
     "/": ("index.html", "text/html; charset=utf-8"),
@@ -190,28 +189,6 @@ def room_invite_url(handler, room_id):
     host = forwarded_host or handler.headers.get("Host", "localhost:8000")
     scheme = forwarded_proto or ("https" if host and ":443" in host else "http")
     return f"{scheme}://{host}/?room={room_id}"
-
-
-def preferred_redirect_url(handler):
-    if not PREFERRED_HOST:
-        return None
-
-    forwarded_proto = handler.headers.get("X-Forwarded-Proto")
-    forwarded_host = handler.headers.get("X-Forwarded-Host")
-    raw_host = (forwarded_host or handler.headers.get("Host", "")).strip()
-    if not raw_host:
-        return None
-
-    host_only, _, port = raw_host.partition(":")
-    host_lower = host_only.lower()
-    www_host = f"www.{PREFERRED_HOST}"
-    if host_lower != www_host:
-        return None
-
-    scheme = forwarded_proto or ("https" if raw_host.endswith(":443") else "http")
-    preferred_netloc = PREFERRED_HOST if not port else f"{PREFERRED_HOST}:{port}"
-    path = handler.path or "/"
-    return f"{scheme}://{preferred_netloc}{path}"
 
 
 def client_ip(handler):
@@ -453,9 +430,6 @@ class GameHandler(BaseHTTPRequestHandler):
             return self.send_json({"error": "Too many requests. Please slow down."}, HTTPStatus.TOO_MANY_REQUESTS)
 
         cleanup_expired_rooms()
-        redirect_url = preferred_redirect_url(self)
-        if redirect_url:
-            return self.redirect(redirect_url)
         parsed = urlparse(self.path)
 
         if parsed.path == "/health":
@@ -518,12 +492,6 @@ class GameHandler(BaseHTTPRequestHandler):
         self.send_header("X-Content-Type-Options", "nosniff")
         self.end_headers()
         self.wfile.write(content)
-
-    def redirect(self, location, status=HTTPStatus.MOVED_PERMANENTLY):
-        self.send_response(status)
-        self.send_header("Location", location)
-        self.send_header("Cache-Control", "public, max-age=300")
-        self.end_headers()
 
     def handle_create_room(self):
         try:
