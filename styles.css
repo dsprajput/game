@@ -55,6 +55,8 @@ h1 {
 }
 
 .hero-copy,
+.search-copy,
+.seo-copy,
 .helper-text {
   color: var(--muted);
 }
@@ -63,6 +65,13 @@ h1 {
   max-width: 720px;
   margin: 14px auto 0;
   line-height: 1.6;
+}
+
+.search-copy {
+  max-width: 760px;
+  margin: 12px auto 0;
+  line-height: 1.65;
+  font-size: 0.98rem;
 }
 
 .panel {
@@ -80,7 +89,8 @@ h1 {
 .room-panel,
 .score-panel,
 .chat-panel,
-.guide-panel {
+.guide-panel,
+.seo-panel {
   padding: 24px;
 }
 
@@ -121,7 +131,18 @@ h1 {
   margin-bottom: 24px;
 }
 
+.seo-panel {
+  margin-bottom: 24px;
+}
+
 .guide-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+  margin-top: 18px;
+}
+
+.faq-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 14px;
@@ -144,6 +165,11 @@ h1 {
   margin: 0;
   color: var(--muted);
   line-height: 1.55;
+}
+
+.seo-copy {
+  margin: 14px 0 0;
+  line-height: 1.7;
 }
 
 .online-stack {
@@ -560,7 +586,8 @@ button:disabled {
     grid-template-columns: 280px 1fr;
   }
 
-  .guide-grid {
+  .guide-grid,
+  .faq-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
@@ -568,7 +595,8 @@ button:disabled {
 @media (max-width: 900px) {
   .online-grid,
   .layout-grid,
-  .guide-grid {
+  .guide-grid,
+  .faq-grid {
     grid-template-columns: 1fr;
   }
 
@@ -594,6 +622,7 @@ button:disabled {
   .setup-panel,
   .room-panel,
   .guide-panel,
+  .seo-panel,
   .winner-panel,
   .status-panel {
     padding: 20px;
@@ -612,6 +641,11 @@ button:disabled {
 
   .hero-copy {
     font-size: 0.96rem;
+  }
+
+  .search-copy,
+  .seo-copy {
+    font-size: 0.94rem;
   }
 
   .mode-switch {
@@ -699,6 +733,7 @@ button:disabled {
   .setup-panel,
   .room-panel,
   .guide-panel,
+  .seo-panel,
   .winner-panel,
   .status-panel {
     padding: 16px;
