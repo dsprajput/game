@@ -27,6 +27,7 @@ ROOM_WAITING_TTL_SECONDS = 24 * 60 * 60
 ROOM_FINISHED_TTL_SECONDS = 6 * 60 * 60
 RATE_LIMIT_WINDOW_SECONDS = 60
 RATE_LIMIT_MAX_REQUESTS = 240
+BOT_TURN_DELAY_SECONDS = 3
 
 
 db_lock = threading.Lock()
@@ -55,6 +56,7 @@ def init_db():
                 card_types_json TEXT NOT NULL,
                 starter_index INTEGER NOT NULL DEFAULT 0,
                 active_player_index INTEGER NOT NULL DEFAULT 0,
+                bot_turn_at REAL,
                 turn_count INTEGER NOT NULL DEFAULT 0,
                 winner_player_id TEXT,
                 winner_type TEXT,
@@ -104,6 +106,8 @@ def init_db():
         room_columns = [row["name"] for row in CONN.execute("PRAGMA table_info(rooms)").fetchall()]
         if "bot_count" not in room_columns:
             CONN.execute("ALTER TABLE rooms ADD COLUMN bot_count INTEGER NOT NULL DEFAULT 0")
+        if "bot_turn_at" not in room_columns:
+            CONN.execute("ALTER TABLE rooms ADD COLUMN bot_turn_at REAL")
 
 
 def now_ts():
@@ -178,6 +182,14 @@ def summarize_hand(hand):
         return "No cards"
     _, best_count = sorted(counts.items(), key=lambda item: item[1], reverse=True)[0]
     return f"Best group: {best_count} matching card" + ("s" if best_count > 1 else "")
+
+
+def scheduled_bot_turn_time(room, players, from_index=None):
+    target_index = room["active_player_index"] if from_index is None else from_index
+    if target_index < 0 or target_index >= len(players):
+        return None
+
+    return now_ts() + BOT_TURN_DELAY_SECONDS if players[target_index]["is_bot"] else None
 
 
 def human_slots(room):
@@ -372,6 +384,7 @@ def serialize_room(room, players, current_player, handler):
         "self": public_players[current_index],
         "starterIndex": room["starter_index"],
         "activePlayerIndex": room["active_player_index"],
+        "botTurnAt": room["bot_turn_at"],
         "turnCount": room["turn_count"],
         "winner": winner,
         "messages": messages,
@@ -402,13 +415,14 @@ def start_room_if_ready(room_id):
             SET status = 'playing',
                 starter_index = ?,
                 active_player_index = ?,
+                bot_turn_at = ?,
                 turn_count = 1,
                 winner_player_id = NULL,
                 winner_type = NULL,
                 updated_at = ?
             WHERE id = ?
             """,
-            (starter_index, starter_index, updated_at, room_id),
+            (starter_index, starter_index, scheduled_bot_turn_time(room, players, starter_index), updated_at, room_id),
         )
     advance_bot_turns(room_id)
 
@@ -436,13 +450,14 @@ def restart_room(room_id):
             SET status = 'playing',
                 starter_index = ?,
                 active_player_index = ?,
+                bot_turn_at = ?,
                 turn_count = 1,
                 winner_player_id = NULL,
                 winner_type = NULL,
                 updated_at = ?
             WHERE id = ?
             """,
-            (starter_index, starter_index, updated_at, room_id),
+            (starter_index, starter_index, scheduled_bot_turn_time(room, players, starter_index), updated_at, room_id),
         )
     return advance_bot_turns(room_id)
 
@@ -494,6 +509,7 @@ def resolve_turn(room_id, room, players, acting_player, card_id):
                 SET status = 'finished',
                     winner_player_id = ?,
                     winner_type = ?,
+                    bot_turn_at = NULL,
                     updated_at = ?
                 WHERE id = ?
                 """,
@@ -503,30 +519,42 @@ def resolve_turn(room_id, room, players, acting_player, card_id):
             CONN.execute(
                 """
                 UPDATE rooms
-                SET active_player_index = ?, turn_count = turn_count + 1, updated_at = ?
+                SET active_player_index = ?, bot_turn_at = ?, turn_count = turn_count + 1, updated_at = ?
                 WHERE id = ?
                 """,
-                (next_index, updated_at, room_id),
+                (next_index, scheduled_bot_turn_time(room, players, next_index), updated_at, room_id),
             )
 
 
 def advance_bot_turns(room_id):
-    while True:
-        room_bundle = get_room(room_id)
-        if room_bundle is None:
-            return None
+    room_bundle = get_room(room_id)
+    if room_bundle is None:
+        return None
 
-        room, players = room_bundle
-        if room["status"] != "playing":
-            return room_bundle
+    room, players = room_bundle
+    if room["status"] != "playing":
+        return room_bundle
 
-        active_player = players[room["active_player_index"]]
-        if not active_player["is_bot"]:
-            return room_bundle
+    active_player = players[room["active_player_index"]]
+    if not active_player["is_bot"]:
+        return room_bundle
 
-        hand = json.loads(active_player["hand_json"])
-        chosen_card = choose_bot_card(hand)
-        resolve_turn(room_id, room, players, active_player, chosen_card["id"])
+    bot_turn_at = room["bot_turn_at"]
+    if bot_turn_at is None:
+        with CONN:
+            CONN.execute(
+                "UPDATE rooms SET bot_turn_at = ?, updated_at = ? WHERE id = ?",
+                (now_ts() + BOT_TURN_DELAY_SECONDS, now_ts(), room_id),
+            )
+        return get_room(room_id)
+
+    if bot_turn_at > now_ts():
+        return room_bundle
+
+    hand = json.loads(active_player["hand_json"])
+    chosen_card = choose_bot_card(hand)
+    resolve_turn(room_id, room, players, active_player, chosen_card["id"])
+    return get_room(room_id)
 
 
 def authenticated_player(handler, room_id):

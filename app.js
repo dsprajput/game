@@ -1,5 +1,6 @@
 const defaultCardTypes = ["Ram", "Laxman", "Sita", "Hanuman", "Bharat", "Shatrughna"];
 const ROOM_STORAGE_KEY = "four-of-a-kind-room-players";
+const COMPUTER_TURN_DELAY_MS = 3000;
 let audioContext = null;
 
 const state = {
@@ -917,7 +918,7 @@ function renderHand() {
     passDevice.classList.add("hidden");
     handView.classList.add("hidden");
     computerTurn.classList.remove("hidden");
-    computerTurnCopy.textContent = `${activePlayer.name} is choosing a card. Their hand stays hidden.`;
+    computerTurnCopy.textContent = `${activePlayer.name} is choosing a card. Their hand stays hidden for about 3 seconds.`;
     return;
   }
 
@@ -975,7 +976,7 @@ function renderRemoteHand() {
   if (!isMyTurn && !state.winner) {
     passDevice.classList.remove("hidden");
     passDevice.textContent = activePlayer.isBot
-      ? `${activePlayer.name} is choosing a card automatically.`
+      ? `${activePlayer.name} is choosing a card automatically. Please wait about 3 seconds.`
       : `${activePlayer.name} is deciding which card to pass.`;
   }
 }
@@ -1060,7 +1061,7 @@ function maybeRunComputerTurn() {
   state.computerTimer = window.setTimeout(() => {
     const chosenCard = chooseComputerCard(activePlayer.hand);
     passCard(chosenCard.id);
-  }, 900);
+  }, COMPUTER_TURN_DELAY_MS);
 }
 
 function clearComputerTurn() {
