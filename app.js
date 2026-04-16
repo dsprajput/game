@@ -20,6 +20,8 @@ const state = {
     playerName: "",
     inviteUrl: "",
     playerCount: 0,
+    botCount: 0,
+    humanCount: 0,
     cardTypes: [],
     messages: [],
     lastSeenMessageId: null,
@@ -49,6 +51,7 @@ const chatSendBtn = document.querySelector("#chat-send-btn");
 const emojiButtons = document.querySelectorAll(".emoji-btn");
 const onlinePlayerNameInput = document.querySelector("#online-player-name");
 const onlinePlayerCountInput = document.querySelector("#online-player-count");
+const onlineBotCountInput = document.querySelector("#online-bot-count");
 const onlineCardTypesInput = document.querySelector("#online-card-types");
 const joinRoomCodeInput = document.querySelector("#join-room-code");
 const joinPlayerNameInput = document.querySelector("#join-player-name");
@@ -161,6 +164,19 @@ gameModeInput.addEventListener("change", () => {
   playerCountInput.disabled = isComputerMode;
 });
 
+onlinePlayerCountInput.addEventListener("input", syncOnlineBotCountLimit);
+onlineBotCountInput.addEventListener("input", syncOnlineBotCountLimit);
+
+function syncOnlineBotCountLimit() {
+  const playerCount = Number(onlinePlayerCountInput.value) || 0;
+  const maxBots = Math.max(0, playerCount - 1);
+  onlineBotCountInput.max = String(maxBots);
+  const currentBots = Number(onlineBotCountInput.value) || 0;
+  if (currentBots > maxBots) {
+    onlineBotCountInput.value = String(maxBots);
+  }
+}
+
 function switchMode(mode) {
   state.mode = mode;
   localTabBtn.classList.toggle("active", mode === "local");
@@ -249,6 +265,7 @@ async function createOnlineRoom() {
   clearComputerTurn();
   const playerName = onlinePlayerNameInput.value.trim();
   const playerCount = Number(onlinePlayerCountInput.value);
+  const botCount = Number(onlineBotCountInput.value);
   const cardTypes = parseCardTypes(onlineCardTypesInput.value);
 
   if (!playerName) {
@@ -258,6 +275,11 @@ async function createOnlineRoom() {
 
   if (playerCount < 3 || playerCount > 6) {
     window.alert("Choose between 3 and 6 players.");
+    return;
+  }
+
+  if (botCount < 0 || botCount > playerCount - 1) {
+    window.alert("Choose a valid number of computer players.");
     return;
   }
 
@@ -272,6 +294,7 @@ async function createOnlineRoom() {
     body: {
       playerName,
       playerCount,
+      botCount,
       cardTypes: cardTypes.slice(0, playerCount),
     },
   });
@@ -289,6 +312,8 @@ async function createOnlineRoom() {
     playerName,
     inviteUrl: response.data.inviteUrl,
     playerCount,
+    botCount,
+    humanCount: playerCount - botCount,
     cardTypes: cardTypes.slice(0, playerCount),
     isHost: true,
   });
@@ -336,6 +361,8 @@ async function joinOnlineRoom() {
     playerName,
     inviteUrl: response.data.inviteUrl,
     playerCount: response.data.playerCount,
+    botCount: response.data.botCount ?? 0,
+    humanCount: response.data.humanCount ?? response.data.playerCount,
     cardTypes: response.data.cardTypes,
     isHost: false,
   });
@@ -348,7 +375,7 @@ function setButtonBusy(button, isBusy, label) {
   button.textContent = label;
 }
 
-function connectToRoom({ roomId, playerId, playerToken, playerName, inviteUrl, playerCount, cardTypes, isHost }) {
+function connectToRoom({ roomId, playerId, playerToken, playerName, inviteUrl, playerCount, botCount, humanCount, cardTypes, isHost }) {
   stopPolling();
   state.mode = "online";
   state.remote.roomId = roomId;
@@ -357,6 +384,8 @@ function connectToRoom({ roomId, playerId, playerToken, playerName, inviteUrl, p
   state.remote.playerName = playerName;
   state.remote.inviteUrl = inviteUrl;
   state.remote.playerCount = playerCount;
+  state.remote.botCount = botCount || 0;
+  state.remote.humanCount = humanCount || playerCount;
   state.remote.cardTypes = cardTypes;
   state.remote.messages = [];
   state.remote.lastSeenMessageId = null;
@@ -376,6 +405,8 @@ function leaveOnlineRoom() {
     playerName: "",
     inviteUrl: "",
     playerCount: 0,
+    botCount: 0,
+    humanCount: 0,
     cardTypes: [],
     messages: [],
     lastSeenMessageId: null,
@@ -426,6 +457,8 @@ function applyRemoteState(data) {
   state.remote.status = data.status;
   state.remote.inviteUrl = data.inviteUrl;
   state.remote.playerCount = data.playerCount;
+  state.remote.botCount = data.botCount ?? 0;
+  state.remote.humanCount = data.humanCount ?? data.playerCount;
   state.remote.cardTypes = data.cardTypes;
   state.remote.messages = data.messages || [];
   state.players = data.players;
@@ -460,8 +493,9 @@ function applyRemoteState(data) {
   roomCodeValue.textContent = data.roomId;
   roomStatus.textContent = data.status === "waiting" ? "Waiting for players" : data.status === "playing" ? "Game in progress" : "Game finished";
   inviteLinkInput.value = data.inviteUrl;
+  const humanJoined = data.players.filter((player) => !player.isBot).length;
   roomHint.textContent = data.status === "waiting"
-    ? `${data.players.length} of ${data.playerCount} players joined. Share the link until the room is full.`
+    ? `${humanJoined} of ${data.humanCount} human players joined. ${data.botCount} computer player${data.botCount === 1 ? "" : "s"} will join the round automatically.`
     : `You are ${data.self.name}. Only your hand is visible to you.`;
 
   roomPlayers.innerHTML = "";
@@ -470,7 +504,7 @@ function applyRemoteState(data) {
     item.className = `player-item${player.id === data.self.id ? " active" : ""}`;
     item.innerHTML = `
       <div class="details">
-        <strong>${player.name}${player.id === data.self.id ? " (You)" : ""}</strong>
+        <strong>${player.name}${player.id === data.self.id ? " (You)" : ""}${player.isBot ? " (Computer)" : ""}</strong>
         <span>${player.cardCount} cards</span>
       </div>
       <span>${player.id === data.self.id ? summarizeHand(player.hand) : player.handSummary}</span>
@@ -837,8 +871,8 @@ function renderPlayers() {
     item.className = `player-item${index === state.activePlayerIndex ? " active" : ""}`;
     item.innerHTML = `
       <div class="details">
-        <strong>${player.name}${state.mode === "online" && player.id === state.remote.playerId ? " (You)" : ""}</strong>
-        <span>${state.mode === "online" ? player.cardCount : player.hand.length} cards</span>
+      <strong>${player.name}${state.mode === "online" && player.id === state.remote.playerId ? " (You)" : ""}${player.isBot ? " (Computer)" : ""}</strong>
+      <span>${state.mode === "online" ? player.cardCount : player.hand.length} cards</span>
       </div>
       <span>${cardSummary}</span>
     `;
@@ -940,7 +974,9 @@ function renderRemoteHand() {
 
   if (!isMyTurn && !state.winner) {
     passDevice.classList.remove("hidden");
-    passDevice.textContent = `${activePlayer.name} is deciding which card to pass.`;
+    passDevice.textContent = activePlayer.isBot
+      ? `${activePlayer.name} is choosing a card automatically.`
+      : `${activePlayer.name} is deciding which card to pass.`;
   }
 }
 
@@ -1157,6 +1193,8 @@ async function bootstrapRoomFromUrl() {
       playerName: saved.playerName,
       inviteUrl: window.location.href,
       playerCount: 0,
+      botCount: 0,
+      humanCount: 0,
       cardTypes: [],
       isHost: false,
     });
@@ -1173,3 +1211,4 @@ async function bootstrapRoomFromUrl() {
 }
 
 bootstrapRoomFromUrl();
+syncOnlineBotCountLimit();

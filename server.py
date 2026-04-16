@@ -51,6 +51,7 @@ def init_db():
                 id TEXT PRIMARY KEY,
                 status TEXT NOT NULL,
                 player_count INTEGER NOT NULL,
+                bot_count INTEGER NOT NULL DEFAULT 0,
                 card_types_json TEXT NOT NULL,
                 starter_index INTEGER NOT NULL DEFAULT 0,
                 active_player_index INTEGER NOT NULL DEFAULT 0,
@@ -70,6 +71,7 @@ def init_db():
                 name TEXT NOT NULL,
                 session_token TEXT NOT NULL UNIQUE,
                 seat_index INTEGER NOT NULL,
+                is_bot INTEGER NOT NULL DEFAULT 0,
                 score INTEGER NOT NULL DEFAULT 0,
                 hand_json TEXT NOT NULL DEFAULT '[]',
                 joined_at REAL NOT NULL,
@@ -94,9 +96,14 @@ def init_db():
             )
             """
         )
-        columns = [row["name"] for row in CONN.execute("PRAGMA table_info(players)").fetchall()]
-        if "score" not in columns:
+        player_columns = [row["name"] for row in CONN.execute("PRAGMA table_info(players)").fetchall()]
+        if "score" not in player_columns:
             CONN.execute("ALTER TABLE players ADD COLUMN score INTEGER NOT NULL DEFAULT 0")
+        if "is_bot" not in player_columns:
+            CONN.execute("ALTER TABLE players ADD COLUMN is_bot INTEGER NOT NULL DEFAULT 0")
+        room_columns = [row["name"] for row in CONN.execute("PRAGMA table_info(rooms)").fetchall()]
+        if "bot_count" not in room_columns:
+            CONN.execute("ALTER TABLE rooms ADD COLUMN bot_count INTEGER NOT NULL DEFAULT 0")
 
 
 def now_ts():
@@ -128,6 +135,13 @@ def parse_card_types(items):
 
 def normalize_player_name(value):
     return str(value).strip()[:24]
+
+
+def normalize_bot_count(value):
+    try:
+        return max(0, int(value))
+    except (TypeError, ValueError):
+        return 0
 
 
 def build_deck(card_types):
@@ -164,6 +178,36 @@ def summarize_hand(hand):
         return "No cards"
     _, best_count = sorted(counts.items(), key=lambda item: item[1], reverse=True)[0]
     return f"Best group: {best_count} matching card" + ("s" if best_count > 1 else "")
+
+
+def human_slots(room):
+    return room["player_count"] - room["bot_count"]
+
+
+def human_player_count(players):
+    return sum(1 for player in players if not player["is_bot"])
+
+
+def choose_bot_card(hand):
+    counts = count_types(hand)
+    ranked_cards = sorted(hand, key=lambda card: (counts[card["type"]], card["type"], card["id"]))
+    return ranked_cards[0]
+
+
+def insert_bot_players(room_id, player_count, bot_count, timestamp):
+    if bot_count <= 0:
+        return
+
+    first_bot_seat = player_count - bot_count
+    for offset in range(bot_count):
+        seat_index = first_bot_seat + offset
+        CONN.execute(
+            """
+            INSERT INTO players (id, room_id, name, session_token, seat_index, is_bot, hand_json, joined_at, last_seen_at)
+            VALUES (?, ?, ?, ?, ?, 1, '[]', ?, ?)
+            """,
+            (random_id(), room_id, f"Computer {offset + 1}", random_token(), seat_index, timestamp, timestamp),
+        )
 
 
 def deal_hands(player_count, card_types, starter_index):
@@ -294,9 +338,14 @@ def serialize_room(room, players, current_player, handler):
         public_player = {
             "id": player["id"],
             "name": player["name"],
+            "isBot": bool(player["is_bot"]),
             "score": player["score"],
             "cardCount": len(hand),
-            "handSummary": "Hand hidden" if player["id"] != current_player["id"] and room["status"] != "finished" else summarize_hand(hand),
+            "handSummary": (
+                "Computer hand hidden" if player["is_bot"] and room["status"] != "finished"
+                else "Hand hidden" if player["id"] != current_player["id"] and room["status"] != "finished"
+                else summarize_hand(hand)
+            ),
         }
         if player["id"] == current_player["id"]:
             public_player["hand"] = hand
@@ -316,6 +365,8 @@ def serialize_room(room, players, current_player, handler):
         "roomId": room["id"],
         "status": room["status"],
         "playerCount": room["player_count"],
+        "botCount": room["bot_count"],
+        "humanCount": human_slots(room),
         "cardTypes": json.loads(room["card_types_json"]),
         "players": public_players,
         "self": public_players[current_index],
@@ -331,7 +382,7 @@ def serialize_room(room, players, current_player, handler):
 
 def start_room_if_ready(room_id):
     room, players = get_room(room_id)
-    if room is None or room["status"] != "waiting" or len(players) < room["player_count"]:
+    if room is None or room["status"] != "waiting" or human_player_count(players) < human_slots(room):
         return
 
     card_types = json.loads(room["card_types_json"])
@@ -359,6 +410,7 @@ def start_room_if_ready(room_id):
             """,
             (starter_index, starter_index, updated_at, room_id),
         )
+    advance_bot_turns(room_id)
 
 
 def restart_room(room_id):
@@ -392,8 +444,89 @@ def restart_room(room_id):
             """,
             (starter_index, starter_index, updated_at, room_id),
         )
+    return advance_bot_turns(room_id)
 
-    return get_room(room_id)
+
+def resolve_turn(room_id, room, players, acting_player, card_id):
+    hand = json.loads(acting_player["hand_json"])
+    card_index = next((index for index, card in enumerate(hand) if card["id"] == card_id), -1)
+    if card_index == -1:
+        raise ValueError("Card not found in your hand.")
+
+    next_index = (room["active_player_index"] + 1) % len(players)
+    next_player = players[next_index]
+    next_hand = json.loads(next_player["hand_json"])
+
+    card = hand.pop(card_index)
+    next_hand.append(card)
+
+    winner_player_id = None
+    winner_type = None
+    candidate_hands = {player["id"]: json.loads(player["hand_json"]) for player in players}
+    candidate_hands[acting_player["id"]] = hand
+    candidate_hands[next_player["id"]] = next_hand
+
+    for room_player in players:
+        candidate_hand = candidate_hands[room_player["id"]]
+        if has_four_of_a_kind(candidate_hand):
+            winner_player_id = room_player["id"]
+            winner_type = most_common_type(candidate_hand)
+            break
+
+    updated_at = now_ts()
+    with CONN:
+        CONN.execute(
+            "UPDATE players SET hand_json = ?, last_seen_at = ? WHERE id = ?",
+            (json.dumps(hand), updated_at, acting_player["id"]),
+        )
+        CONN.execute(
+            "UPDATE players SET hand_json = ?, last_seen_at = ? WHERE id = ?",
+            (json.dumps(next_hand), updated_at, next_player["id"]),
+        )
+        if winner_player_id:
+            CONN.execute(
+                "UPDATE players SET score = score + 1 WHERE id = ?",
+                (winner_player_id,),
+            )
+            CONN.execute(
+                """
+                UPDATE rooms
+                SET status = 'finished',
+                    winner_player_id = ?,
+                    winner_type = ?,
+                    updated_at = ?
+                WHERE id = ?
+                """,
+                (winner_player_id, winner_type, updated_at, room_id),
+            )
+        else:
+            CONN.execute(
+                """
+                UPDATE rooms
+                SET active_player_index = ?, turn_count = turn_count + 1, updated_at = ?
+                WHERE id = ?
+                """,
+                (next_index, updated_at, room_id),
+            )
+
+
+def advance_bot_turns(room_id):
+    while True:
+        room_bundle = get_room(room_id)
+        if room_bundle is None:
+            return None
+
+        room, players = room_bundle
+        if room["status"] != "playing":
+            return room_bundle
+
+        active_player = players[room["active_player_index"]]
+        if not active_player["is_bot"]:
+            return room_bundle
+
+        hand = json.loads(active_player["hand_json"])
+        chosen_card = choose_bot_card(hand)
+        resolve_turn(room_id, room, players, active_player, chosen_card["id"])
 
 
 def authenticated_player(handler, room_id):
@@ -419,6 +552,8 @@ def player_response(handler, room_row, player_row):
         "playerId": player_row["id"],
         "playerToken": player_row["session_token"],
         "playerCount": room_row["player_count"],
+        "botCount": room_row["bot_count"],
+        "humanCount": room_row["player_count"] - room_row["bot_count"],
         "cardTypes": json.loads(room_row["card_types_json"]),
         "inviteUrl": room_invite_url(handler, room_row["id"]),
     }
@@ -501,12 +636,15 @@ class GameHandler(BaseHTTPRequestHandler):
 
         player_name = normalize_player_name(payload.get("playerName", ""))
         player_count = int(payload.get("playerCount", 0))
+        bot_count = normalize_bot_count(payload.get("botCount", 0))
         card_types = parse_card_types(payload.get("cardTypes", []))
 
         if not player_name:
             return self.send_json({"error": "Player name is required."}, HTTPStatus.BAD_REQUEST)
         if player_count < 3 or player_count > 6:
             return self.send_json({"error": "Choose between 3 and 6 players."}, HTTPStatus.BAD_REQUEST)
+        if bot_count > player_count - 1:
+            return self.send_json({"error": "Keep at least one human player in the room."}, HTTPStatus.BAD_REQUEST)
         if len(card_types) < player_count:
             return self.send_json({"error": "Need at least as many card types as players."}, HTTPStatus.BAD_REQUEST)
 
@@ -522,24 +660,29 @@ class GameHandler(BaseHTTPRequestHandler):
                 CONN.execute(
                     """
                     INSERT INTO rooms (
-                        id, status, player_count, card_types_json, starter_index, active_player_index,
+                        id, status, player_count, bot_count, card_types_json, starter_index, active_player_index,
                         turn_count, winner_player_id, winner_type, created_at, updated_at
-                    ) VALUES (?, 'waiting', ?, ?, 0, 0, 0, NULL, NULL, ?, ?)
+                    ) VALUES (?, 'waiting', ?, ?, ?, 0, 0, 0, NULL, NULL, ?, ?)
                     """,
-                    (room_id, player_count, json.dumps(card_types[:player_count]), timestamp, timestamp),
+                    (room_id, player_count, bot_count, json.dumps(card_types[:player_count]), timestamp, timestamp),
                 )
                 CONN.execute(
                     """
-                    INSERT INTO players (id, room_id, name, session_token, seat_index, hand_json, joined_at, last_seen_at)
-                    VALUES (?, ?, ?, ?, 0, '[]', ?, ?)
+                    INSERT INTO players (id, room_id, name, session_token, seat_index, is_bot, hand_json, joined_at, last_seen_at)
+                    VALUES (?, ?, ?, ?, 0, 0, '[]', ?, ?)
                     """,
                     (player_id, room_id, player_name, session_token, timestamp, timestamp),
                 )
+                insert_bot_players(room_id, player_count, bot_count, timestamp)
+            start_room_if_ready(room_id)
 
         self.send_json({
             "roomId": room_id,
             "playerId": player_id,
             "playerToken": session_token,
+            "playerCount": player_count,
+            "botCount": bot_count,
+            "humanCount": player_count - bot_count,
             "inviteUrl": room_invite_url(self, room_id),
         })
 
@@ -564,20 +707,26 @@ class GameHandler(BaseHTTPRequestHandler):
                 return self.send_json(player_response(self, room, existing_player))
             if room["status"] != "waiting":
                 return self.send_json({"error": "This room has already started."}, HTTPStatus.BAD_REQUEST)
-            if len(players) >= room["player_count"]:
+            if human_player_count(players) >= human_slots(room):
                 return self.send_json({"error": "This room is already full."}, HTTPStatus.BAD_REQUEST)
             if any(player["name"].strip().lower() == player_name.lower() for player in players):
                 return self.send_json({"error": "That name is already taken in this room."}, HTTPStatus.BAD_REQUEST)
 
             player_id = random_id()
             session_token = random_token()
-            seat_index = len(players)
+            used_human_seats = {player["seat_index"] for player in players if not player["is_bot"]}
+            seat_index = next(
+                (index for index in range(human_slots(room)) if index not in used_human_seats),
+                None,
+            )
+            if seat_index is None:
+                return self.send_json({"error": "This room is already full."}, HTTPStatus.BAD_REQUEST)
             timestamp = now_ts()
             with CONN:
                 CONN.execute(
                     """
-                    INSERT INTO players (id, room_id, name, session_token, seat_index, hand_json, joined_at, last_seen_at)
-                    VALUES (?, ?, ?, ?, ?, '[]', ?, ?)
+                    INSERT INTO players (id, room_id, name, session_token, seat_index, is_bot, hand_json, joined_at, last_seen_at)
+                    VALUES (?, ?, ?, ?, ?, 0, '[]', ?, ?)
                     """,
                     (player_id, room_id, player_name, session_token, seat_index, timestamp, timestamp),
                 )
@@ -594,11 +743,11 @@ class GameHandler(BaseHTTPRequestHandler):
             if room_bundle is None:
                 return self.send_json({"error": "Room not found."}, HTTPStatus.NOT_FOUND)
 
-            room, players = room_bundle
             player, error = authenticated_player(self, room_id)
             if error:
                 return self.send_json({"error": error}, HTTPStatus.FORBIDDEN)
 
+            room, players = advance_bot_turns(room_id)
             payload = serialize_room(room, players, player, self)
 
         self.send_json(payload)
@@ -628,69 +777,12 @@ class GameHandler(BaseHTTPRequestHandler):
             active_player = players[room["active_player_index"]]
             if active_player["id"] != player["id"]:
                 return self.send_json({"error": "It is not your turn."}, HTTPStatus.BAD_REQUEST)
+            try:
+                resolve_turn(room_id, room, players, player, card_id)
+            except ValueError as error:
+                return self.send_json({"error": str(error)}, HTTPStatus.BAD_REQUEST)
 
-            hand = json.loads(player["hand_json"])
-            card_index = next((index for index, card in enumerate(hand) if card["id"] == card_id), -1)
-            if card_index == -1:
-                return self.send_json({"error": "Card not found in your hand."}, HTTPStatus.BAD_REQUEST)
-
-            next_index = (room["active_player_index"] + 1) % len(players)
-            next_player = players[next_index]
-            next_hand = json.loads(next_player["hand_json"])
-
-            card = hand.pop(card_index)
-            next_hand.append(card)
-
-            winner_player_id = None
-            winner_type = None
-            candidate_hands = {player["id"]: json.loads(player["hand_json"]) for player in players}
-            candidate_hands[player["id"]] = hand
-            candidate_hands[next_player["id"]] = next_hand
-
-            for room_player in players:
-                candidate_hand = candidate_hands[room_player["id"]]
-                if has_four_of_a_kind(candidate_hand):
-                    winner_player_id = room_player["id"]
-                    winner_type = most_common_type(candidate_hand)
-                    break
-
-            updated_at = now_ts()
-            with CONN:
-                CONN.execute(
-                    "UPDATE players SET hand_json = ?, last_seen_at = ? WHERE id = ?",
-                    (json.dumps(hand), updated_at, player["id"]),
-                )
-                CONN.execute(
-                    "UPDATE players SET hand_json = ?, last_seen_at = ? WHERE id = ?",
-                    (json.dumps(next_hand), updated_at, next_player["id"]),
-                )
-                if winner_player_id:
-                    CONN.execute(
-                        "UPDATE players SET score = score + 1 WHERE id = ?",
-                        (winner_player_id,),
-                    )
-                    CONN.execute(
-                        """
-                        UPDATE rooms
-                        SET status = 'finished',
-                            winner_player_id = ?,
-                            winner_type = ?,
-                            updated_at = ?
-                        WHERE id = ?
-                        """,
-                        (winner_player_id, winner_type, updated_at, room_id),
-                    )
-                else:
-                    CONN.execute(
-                        """
-                        UPDATE rooms
-                        SET active_player_index = ?, turn_count = turn_count + 1, updated_at = ?
-                        WHERE id = ?
-                        """,
-                        (next_index, updated_at, room_id),
-                    )
-
-            updated_room, updated_players = get_room(room_id)
+            updated_room, updated_players = advance_bot_turns(room_id)
             current_player = next(row for row in updated_players if row["id"] == player["id"])
             response = serialize_room(updated_room, updated_players, current_player, self)
 
@@ -708,7 +800,7 @@ class GameHandler(BaseHTTPRequestHandler):
                 return self.send_json({"error": error}, HTTPStatus.FORBIDDEN)
             if room["status"] != "finished":
                 return self.send_json({"error": "You can replay only after the round ends."}, HTTPStatus.BAD_REQUEST)
-            if len(players) < room["player_count"]:
+            if human_player_count(players) < human_slots(room):
                 return self.send_json({"error": "Room is missing players for a new round."}, HTTPStatus.BAD_REQUEST)
 
             updated_room, updated_players = restart_room(room_id)
