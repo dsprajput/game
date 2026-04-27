@@ -565,10 +565,12 @@ body[data-theme="dark"] .theme-toggle {
   overflow: hidden;
   border: 1px solid rgba(255, 255, 255, 0.35);
   background-color: rgba(255, 255, 255, 0.08);
-  background-image: url("./card-characters.png");
+  background-image:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.02)),
+    url("./card-characters.png");
   background-repeat: no-repeat;
-  background-size: 600% 200%;
-  background-position: 0% 0%;
+  background-size: 100% 100%, 600% 200%;
+  background-position: center, 0% 0%;
 }
 
 .card-halo {
@@ -609,46 +611,60 @@ body[data-theme="dark"] .theme-toggle {
   font-size: 0.95rem;
 }
 
-.card-sprite-ram { background-position: 0% 0%; }
-.card-sprite-laxman { background-position: 20% 0%; }
-.card-sprite-sita { background-position: 40% 0%; }
-.card-sprite-hanuman { background-position: 60% 0%; }
-.card-sprite-bharat { background-position: 80% 0%; }
-.card-sprite-shatrughna { background-position: 100% 0%; }
-.card-sprite-ravan { background-position: 0% 100%; }
-.card-sprite-kumbhakaran { background-position: 20% 100%; }
-.card-sprite-vibhishan { background-position: 40% 100%; }
-.card-sprite-sugriv { background-position: 60% 100%; }
-.card-sprite-jambavan { background-position: 80% 100%; }
-.card-sprite-angad { background-position: 100% 100%; }
-.card-sprite-default { background-position: 0% 0%; }
+.card-sprite-ram { background-position: center, 0% 0%; }
+.card-sprite-laxman { background-position: center, 20% 0%; }
+.card-sprite-sita { background-position: center, 40% 0%; }
+.card-sprite-hanuman { background-position: center, 60% 0%; }
+.card-sprite-bharat { background-position: center, 80% 0%; }
+.card-sprite-shatrughna { background-position: center, 100% 0%; }
+.card-sprite-ravan { background-position: center, 0% 100%; }
+.card-sprite-kumbhakaran { background-position: center, 20% 100%; }
+.card-sprite-vibhishan { background-position: center, 40% 100%; }
+.card-sprite-sugriv { background-position: center, 60% 100%; }
+.card-sprite-jambavan { background-position: center, 80% 100%; }
+.card-sprite-angad { background-position: center, 100% 100%; }
+.card-sprite-default { background-position: center, 0% 0%; }
 
 .card-theme-sun .card-figure {
-  background: linear-gradient(180deg, rgba(255, 219, 157, 0.72), rgba(205, 105, 49, 0.22));
+  background-image:
+    linear-gradient(180deg, rgba(255, 219, 157, 0.28), rgba(205, 105, 49, 0.08)),
+    url("./card-characters.png");
 }
 
 .card-theme-forest .card-figure {
-  background: linear-gradient(180deg, rgba(173, 224, 163, 0.7), rgba(54, 112, 66, 0.22));
+  background-image:
+    linear-gradient(180deg, rgba(173, 224, 163, 0.24), rgba(54, 112, 66, 0.08)),
+    url("./card-characters.png");
 }
 
 .card-theme-lotus .card-figure {
-  background: linear-gradient(180deg, rgba(251, 198, 229, 0.78), rgba(195, 87, 145, 0.22));
+  background-image:
+    linear-gradient(180deg, rgba(251, 198, 229, 0.24), rgba(195, 87, 145, 0.08)),
+    url("./card-characters.png");
 }
 
 .card-theme-ember .card-figure {
-  background: linear-gradient(180deg, rgba(255, 204, 145, 0.78), rgba(179, 73, 35, 0.22));
+  background-image:
+    linear-gradient(180deg, rgba(255, 204, 145, 0.26), rgba(179, 73, 35, 0.08)),
+    url("./card-characters.png");
 }
 
 .card-theme-royal .card-figure {
-  background: linear-gradient(180deg, rgba(255, 236, 154, 0.78), rgba(173, 113, 24, 0.2));
+  background-image:
+    linear-gradient(180deg, rgba(255, 236, 154, 0.26), rgba(173, 113, 24, 0.08)),
+    url("./card-characters.png");
 }
 
 .card-theme-storm .card-figure {
-  background: linear-gradient(180deg, rgba(190, 214, 255, 0.78), rgba(78, 107, 165, 0.22));
+  background-image:
+    linear-gradient(180deg, rgba(190, 214, 255, 0.24), rgba(78, 107, 165, 0.08)),
+    url("./card-characters.png");
 }
 
 .card-theme-default .card-figure {
-  background: linear-gradient(180deg, rgba(235, 217, 255, 0.7), rgba(125, 93, 165, 0.18));
+  background-image:
+    linear-gradient(180deg, rgba(235, 217, 255, 0.22), rgba(125, 93, 165, 0.08)),
+    url("./card-characters.png");
 }
 
 body[data-theme="dark"] .card-figure {
