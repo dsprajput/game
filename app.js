@@ -1,7 +1,16 @@
 const defaultCardTypes = ["Ram", "Laxman", "Sita", "Hanuman", "Bharat", "Shatrughna"];
 const ROOM_STORAGE_KEY = "four-of-a-kind-room-players";
+const THEME_STORAGE_KEY = "dhup-theme";
 const COMPUTER_TURN_DELAY_MS = 3000;
 let audioContext = null;
+const cardArtMap = {
+  ram: { icon: "🏹", aura: "sun", figure: "Royal archer prince" },
+  laxman: { icon: "🛡️", aura: "forest", figure: "Loyal warrior prince" },
+  sita: { icon: "🌸", aura: "lotus", figure: "Graceful queen figure" },
+  hanuman: { icon: "🪔", aura: "ember", figure: "Devoted hero figure" },
+  bharat: { icon: "👑", aura: "royal", figure: "Noble prince figure" },
+  shatrughna: { icon: "⚔️", aura: "storm", figure: "Swift warrior figure" },
+};
 
 const state = {
   mode: "local",
@@ -44,6 +53,7 @@ const onlineCreateForm = document.querySelector("#online-create-form");
 const onlineJoinForm = document.querySelector("#online-join-form");
 const onlineCreateBtn = onlineCreateForm.querySelector('button[type="submit"]');
 const onlineJoinBtn = onlineJoinForm.querySelector('button[type="submit"]');
+const themeToggleBtn = document.querySelector("#theme-toggle");
 const chatPanel = document.querySelector("#chat-panel");
 const chatMessages = document.querySelector("#chat-messages");
 const chatForm = document.querySelector("#chat-form");
@@ -150,6 +160,11 @@ leaveRoomBtn.addEventListener("click", () => {
   leaveOnlineRoom();
 });
 
+themeToggleBtn.addEventListener("click", () => {
+  const nextTheme = document.body.dataset.theme === "dark" ? "light" : "dark";
+  applyTheme(nextTheme);
+});
+
 playAgainBtn.addEventListener("click", async () => {
   if (state.mode === "online" && state.remote.roomId) {
     await replayOnlineRoom();
@@ -186,6 +201,19 @@ function switchMode(mode) {
   onlineSection.classList.toggle("hidden", mode !== "online");
   roomPanel.classList.toggle("hidden", mode !== "online" || !state.remote.roomId);
   render();
+}
+
+function applyTheme(theme) {
+  const normalizedTheme = theme === "dark" ? "dark" : "light";
+  document.body.dataset.theme = normalizedTheme;
+  themeToggleBtn.textContent = normalizedTheme === "dark" ? "Light Mode" : "Dark Mode";
+  themeToggleBtn.setAttribute("aria-pressed", String(normalizedTheme === "dark"));
+  window.localStorage.setItem(THEME_STORAGE_KEY, normalizedTheme);
+}
+
+function loadSavedTheme() {
+  const savedTheme = window.localStorage.getItem(THEME_STORAGE_KEY);
+  applyTheme(savedTheme === "dark" ? "dark" : "light");
 }
 
 function startLocalGame() {
@@ -983,16 +1011,22 @@ function renderRemoteHand() {
 
 function createCardMarkup(card, actionable) {
   const initial = card.type.charAt(0).toUpperCase();
+  const art = getCardArt(card.type);
 
   return `
-    <div class="card-face${actionable ? " actionable" : ""}" aria-label="${card.type} card">
+    <div class="card-face card-theme-${art.aura}${actionable ? " actionable" : ""}" aria-label="${card.type} card">
       <div class="card-corner top">
         <div class="card-initial">${initial}</div>
         <div class="card-mark">◆</div>
       </div>
       <div class="card-center">
+        <div class="card-figure" aria-hidden="true">
+          <div class="card-halo"></div>
+          <div class="card-figure-icon">${art.icon}</div>
+        </div>
         <div class="card-medallion">${initial}</div>
         <div class="card-label">${card.type}</div>
+        <div class="card-figure-caption">${art.figure}</div>
         <div class="card-meta">${actionable ? "Tap to pass this card to the next player." : "Waiting for your turn."}</div>
       </div>
       <div class="card-corner bottom">
@@ -1001,6 +1035,19 @@ function createCardMarkup(card, actionable) {
       </div>
     </div>
   `;
+}
+
+function getCardArt(type) {
+  const normalizedType = String(type || "").trim().toLowerCase();
+  if (cardArtMap[normalizedType]) {
+    return cardArtMap[normalizedType];
+  }
+
+  return {
+    icon: "✨",
+    aura: "default",
+    figure: "Special character card",
+  };
 }
 
 function passCard(cardId) {
@@ -1211,5 +1258,6 @@ async function bootstrapRoomFromUrl() {
   roomHint.textContent = "Enter your name and join this room.";
 }
 
+loadSavedTheme();
 bootstrapRoomFromUrl();
 syncOnlineBotCountLimit();
