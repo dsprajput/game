@@ -559,14 +559,16 @@ body[data-theme="dark"] .theme-toggle {
 
 .card-figure {
   position: relative;
-  display: grid;
-  place-items: center;
   width: 104px;
-  height: 104px;
+  height: 120px;
   border-radius: 28px;
   overflow: hidden;
   border: 1px solid rgba(255, 255, 255, 0.35);
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.55), rgba(255, 255, 255, 0.08));
+  background-color: rgba(255, 255, 255, 0.08);
+  background-image: url("./card-characters.png");
+  background-repeat: no-repeat;
+  background-size: 600% 200%;
+  background-position: 0% 0%;
 }
 
 .card-halo {
@@ -574,14 +576,7 @@ body[data-theme="dark"] .theme-toggle {
   inset: 14px;
   border-radius: 999px;
   background: radial-gradient(circle, rgba(255, 255, 255, 0.82), rgba(255, 255, 255, 0.04) 72%);
-}
-
-.card-figure-icon {
-  position: relative;
-  z-index: 1;
-  font-size: 3rem;
-  line-height: 1;
-  filter: drop-shadow(0 10px 14px rgba(0, 0, 0, 0.12));
+  pointer-events: none;
 }
 
 .card-medallion {
@@ -608,18 +603,25 @@ body[data-theme="dark"] .theme-toggle {
   max-width: 11ch;
 }
 
-.card-figure-caption {
-  color: var(--card-text-soft);
-  font-size: 0.78rem;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-}
-
 .card-meta {
   color: var(--muted);
   line-height: 1.5;
   font-size: 0.95rem;
 }
+
+.card-sprite-ram { background-position: 0% 0%; }
+.card-sprite-laxman { background-position: 20% 0%; }
+.card-sprite-sita { background-position: 40% 0%; }
+.card-sprite-hanuman { background-position: 60% 0%; }
+.card-sprite-bharat { background-position: 80% 0%; }
+.card-sprite-shatrughna { background-position: 100% 0%; }
+.card-sprite-ravan { background-position: 0% 100%; }
+.card-sprite-kumbhakaran { background-position: 20% 100%; }
+.card-sprite-vibhishan { background-position: 40% 100%; }
+.card-sprite-sugriv { background-position: 60% 100%; }
+.card-sprite-jambavan { background-position: 80% 100%; }
+.card-sprite-angad { background-position: 100% 100%; }
+.card-sprite-default { background-position: 0% 0%; }
 
 .card-theme-sun .card-figure {
   background: linear-gradient(180deg, rgba(255, 219, 157, 0.72), rgba(205, 105, 49, 0.22));
@@ -836,11 +838,7 @@ body[data-theme="dark"] .credit-bookmark {
 
   .card-figure {
     width: 92px;
-    height: 92px;
-  }
-
-  .card-figure-icon {
-    font-size: 2.6rem;
+    height: 108px;
   }
 
   .card-medallion {

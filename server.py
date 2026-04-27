@@ -20,6 +20,7 @@ STATIC_FILES = {
     "/index.html": ("index.html", "text/html; charset=utf-8"),
     "/app.js": ("app.js", "application/javascript; charset=utf-8"),
     "/styles.css": ("styles.css", "text/css; charset=utf-8"),
+    "/card-characters.png": ("card-characters.png", "image/png"),
     "/robots.txt": ("robots.txt", "text/plain; charset=utf-8"),
     "/sitemap.xml": ("sitemap.xml", "application/xml; charset=utf-8"),
 }

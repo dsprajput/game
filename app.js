@@ -4,12 +4,19 @@ const THEME_STORAGE_KEY = "dhup-theme";
 const COMPUTER_TURN_DELAY_MS = 3000;
 let audioContext = null;
 const cardArtMap = {
-  ram: { icon: "🏹", aura: "sun", figure: "Royal archer prince" },
-  laxman: { icon: "🛡️", aura: "forest", figure: "Loyal warrior prince" },
-  sita: { icon: "🌸", aura: "lotus", figure: "Graceful queen figure" },
-  hanuman: { icon: "🪔", aura: "ember", figure: "Devoted hero figure" },
-  bharat: { icon: "👑", aura: "royal", figure: "Noble prince figure" },
-  shatrughna: { icon: "⚔️", aura: "storm", figure: "Swift warrior figure" },
+  ram: { sprite: "ram", aura: "sun" },
+  "shri ram": { sprite: "ram", aura: "sun" },
+  laxman: { sprite: "laxman", aura: "forest" },
+  sita: { sprite: "sita", aura: "lotus" },
+  hanuman: { sprite: "hanuman", aura: "ember" },
+  bharat: { sprite: "bharat", aura: "royal" },
+  shatrughna: { sprite: "shatrughna", aura: "storm" },
+  ravan: { sprite: "ravan", aura: "storm" },
+  kumbhakaran: { sprite: "kumbhakaran", aura: "ember" },
+  vibhishan: { sprite: "vibhishan", aura: "forest" },
+  sugriv: { sprite: "sugriv", aura: "royal" },
+  jambavan: { sprite: "jambavan", aura: "default" },
+  angad: { sprite: "angad", aura: "sun" },
 };
 
 const state = {
@@ -1020,13 +1027,11 @@ function createCardMarkup(card, actionable) {
         <div class="card-mark">◆</div>
       </div>
       <div class="card-center">
-        <div class="card-figure" aria-hidden="true">
+        <div class="card-figure card-sprite-${art.sprite}" aria-hidden="true">
           <div class="card-halo"></div>
-          <div class="card-figure-icon">${art.icon}</div>
         </div>
         <div class="card-medallion">${initial}</div>
         <div class="card-label">${card.type}</div>
-        <div class="card-figure-caption">${art.figure}</div>
         <div class="card-meta">${actionable ? "Tap to pass this card to the next player." : "Waiting for your turn."}</div>
       </div>
       <div class="card-corner bottom">
@@ -1044,9 +1049,8 @@ function getCardArt(type) {
   }
 
   return {
-    icon: "✨",
+    sprite: "default",
     aura: "default",
-    figure: "Special character card",
   };
 }
 
