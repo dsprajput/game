@@ -1030,7 +1030,6 @@ function createCardMarkup(card, actionable) {
         <div class="card-figure card-sprite-${art.sprite}" aria-hidden="true">
           <div class="card-halo"></div>
         </div>
-        <div class="card-medallion">${initial}</div>
         <div class="card-label">${card.type}</div>
         <div class="card-meta">${actionable ? "Tap to pass this card to the next player." : "Waiting for your turn."}</div>
       </div>

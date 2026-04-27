@@ -552,49 +552,34 @@ body[data-theme="dark"] .theme-toggle {
   z-index: 1;
   display: grid;
   justify-items: center;
-  gap: 9px;
+  gap: 12px;
   text-align: center;
   padding: 8px 12px;
 }
 
 .card-figure {
   position: relative;
-  width: 104px;
-  height: 120px;
-  border-radius: 28px;
+  width: 116px;
+  height: 134px;
+  border-radius: 24px;
   overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.35);
-  background-color: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(191, 91, 44, 0.14);
+  background-color: rgba(255, 255, 255, 0.02);
   background-image:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.02)),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.01), rgba(255, 255, 255, 0)),
     url("./card-characters.png");
   background-repeat: no-repeat;
   background-size: 100% 100%, 600% 200%;
   background-position: center, 0% 0%;
+  box-shadow: 0 10px 24px rgba(122, 74, 40, 0.12);
 }
 
 .card-halo {
   position: absolute;
-  inset: 14px;
+  inset: 0;
   border-radius: 999px;
-  background: radial-gradient(circle, rgba(255, 255, 255, 0.82), rgba(255, 255, 255, 0.04) 72%);
+  background: radial-gradient(circle at center, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0) 62%);
   pointer-events: none;
-}
-
-.card-medallion {
-  display: grid;
-  place-items: center;
-  width: 60px;
-  height: 60px;
-  border-radius: 999px;
-  background: linear-gradient(145deg, rgba(191, 91, 44, 0.14), rgba(255, 255, 255, 0.86));
-  border: 1px solid rgba(191, 91, 44, 0.22);
-  box-shadow: inset 0 0 0 4px rgba(255, 255, 255, 0.62);
-  color: #8f3d1a;
-  font-family: "Palatino Linotype", "Book Antiqua", Georgia, serif;
-  font-size: 1.4rem;
-  font-weight: 700;
-  margin-top: -18px;
 }
 
 .card-label {
@@ -627,52 +612,49 @@ body[data-theme="dark"] .theme-toggle {
 
 .card-theme-sun .card-figure {
   background-image:
-    linear-gradient(180deg, rgba(255, 219, 157, 0.28), rgba(205, 105, 49, 0.08)),
+    linear-gradient(180deg, rgba(255, 219, 157, 0.14), rgba(205, 105, 49, 0.03)),
     url("./card-characters.png");
 }
 
 .card-theme-forest .card-figure {
   background-image:
-    linear-gradient(180deg, rgba(173, 224, 163, 0.24), rgba(54, 112, 66, 0.08)),
+    linear-gradient(180deg, rgba(173, 224, 163, 0.12), rgba(54, 112, 66, 0.03)),
     url("./card-characters.png");
 }
 
 .card-theme-lotus .card-figure {
   background-image:
-    linear-gradient(180deg, rgba(251, 198, 229, 0.24), rgba(195, 87, 145, 0.08)),
+    linear-gradient(180deg, rgba(251, 198, 229, 0.12), rgba(195, 87, 145, 0.03)),
     url("./card-characters.png");
 }
 
 .card-theme-ember .card-figure {
   background-image:
-    linear-gradient(180deg, rgba(255, 204, 145, 0.26), rgba(179, 73, 35, 0.08)),
+    linear-gradient(180deg, rgba(255, 204, 145, 0.14), rgba(179, 73, 35, 0.03)),
     url("./card-characters.png");
 }
 
 .card-theme-royal .card-figure {
   background-image:
-    linear-gradient(180deg, rgba(255, 236, 154, 0.26), rgba(173, 113, 24, 0.08)),
+    linear-gradient(180deg, rgba(255, 236, 154, 0.12), rgba(173, 113, 24, 0.03)),
     url("./card-characters.png");
 }
 
 .card-theme-storm .card-figure {
   background-image:
-    linear-gradient(180deg, rgba(190, 214, 255, 0.24), rgba(78, 107, 165, 0.08)),
+    linear-gradient(180deg, rgba(190, 214, 255, 0.12), rgba(78, 107, 165, 0.03)),
     url("./card-characters.png");
 }
 
 .card-theme-default .card-figure {
   background-image:
-    linear-gradient(180deg, rgba(235, 217, 255, 0.22), rgba(125, 93, 165, 0.08)),
+    linear-gradient(180deg, rgba(235, 217, 255, 0.1), rgba(125, 93, 165, 0.03)),
     url("./card-characters.png");
 }
 
 body[data-theme="dark"] .card-figure {
-  border-color: rgba(255, 247, 232, 0.12);
-}
-
-body[data-theme="dark"] .card-medallion {
-  color: #ffe0be;
+  border-color: rgba(255, 247, 232, 0.08);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.28);
 }
 
 body[data-theme="dark"] .card-corner {
@@ -853,14 +835,8 @@ body[data-theme="dark"] .credit-bookmark {
   }
 
   .card-figure {
-    width: 92px;
-    height: 108px;
-  }
-
-  .card-medallion {
-    width: 56px;
-    height: 56px;
-    font-size: 1.25rem;
+    width: 100px;
+    height: 116px;
   }
 
   .card-label {
