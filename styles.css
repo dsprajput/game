@@ -13,8 +13,6 @@
   --card-frame: rgba(191, 91, 44, 0.14);
   --card-glow: rgba(91, 56, 26, 0.18);
   --card-text-soft: #8c6d57;
-  --panel-highlight: linear-gradient(135deg, rgba(255, 215, 170, 0.32), rgba(255, 255, 255, 0));
-  --play-glow: rgba(219, 113, 61, 0.18);
 }
 
 body[data-theme="dark"] {
@@ -32,8 +30,6 @@ body[data-theme="dark"] {
   --card-frame: rgba(255, 202, 142, 0.14);
   --card-glow: rgba(0, 0, 0, 0.34);
   --card-text-soft: #e8cfb1;
-  --panel-highlight: linear-gradient(135deg, rgba(255, 160, 102, 0.12), rgba(255, 255, 255, 0));
-  --play-glow: rgba(255, 150, 94, 0.18);
 }
 
 * {
@@ -46,9 +42,6 @@ body {
   font-family: "Avenir Next", "Segoe UI", sans-serif;
   color: var(--ink);
   background:
-    radial-gradient(circle at 12% 14%, rgba(255, 174, 94, 0.26), transparent 24%),
-    radial-gradient(circle at 86% 18%, rgba(103, 194, 255, 0.2), transparent 18%),
-    radial-gradient(circle at 74% 82%, rgba(238, 111, 169, 0.18), transparent 22%),
     radial-gradient(circle at top left, rgba(255, 255, 255, 0.7), transparent 30%),
     linear-gradient(135deg, var(--bg) 0%, var(--bg-deep) 100%);
 }
@@ -116,16 +109,6 @@ h1 {
   border-radius: 24px;
   box-shadow: var(--shadow);
   backdrop-filter: blur(12px);
-  position: relative;
-  overflow: hidden;
-}
-
-.panel::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: var(--panel-highlight);
-  pointer-events: none;
 }
 
 .mode-switch,
@@ -163,16 +146,9 @@ h1 {
 
 .mode-btn.active,
 .primary-btn {
-  background: linear-gradient(135deg, #8f3d1a 0%, var(--accent) 52%, #f09859 100%);
+  background: linear-gradient(135deg, #8f3d1a 0%, var(--accent) 100%);
   color: #fff7ef;
   box-shadow: 0 14px 28px rgba(170, 83, 42, 0.22);
-}
-
-.mode-btn:hover,
-.primary-btn:hover,
-.ghost-btn:hover,
-.emoji-btn:hover {
-  box-shadow: 0 10px 22px rgba(191, 91, 44, 0.14);
 }
 
 .setup-panel {
@@ -324,7 +300,6 @@ body[data-theme="dark"] .theme-toggle {
 .game-area {
   display: grid;
   gap: 20px;
-  animation: playAreaRise 280ms ease;
 }
 
 .chat-panel {
@@ -398,7 +373,7 @@ body[data-theme="dark"] .theme-toggle {
   align-items: center;
   padding: 12px 14px;
   border-radius: 16px;
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.72), rgba(255, 230, 204, 0.56));
+  background: rgba(255, 255, 255, 0.58);
   border: 1px solid var(--border);
 }
 
@@ -463,16 +438,13 @@ body[data-theme="dark"] .theme-toggle {
 .player-item {
   padding: 14px 16px;
   border-radius: 18px;
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.76), rgba(255, 232, 210, 0.58));
+  background: rgba(255, 255, 255, 0.58);
   border: 1px solid var(--border);
-  transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
 }
 
 .player-item.active {
   border-color: rgba(191, 91, 44, 0.45);
-  background: linear-gradient(135deg, rgba(255, 237, 212, 0.98), rgba(255, 197, 149, 0.64));
-  box-shadow: 0 14px 26px var(--play-glow);
-  transform: translateY(-2px);
+  background: rgba(255, 239, 224, 0.9);
 }
 
 .player-item .details {
@@ -496,7 +468,7 @@ body[data-theme="dark"] .theme-toggle {
   padding: 28px;
   text-align: center;
   color: var(--muted);
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.58), rgba(255, 231, 207, 0.5));
+  background: rgba(255, 255, 255, 0.45);
 }
 
 .hand-view {
@@ -517,12 +489,6 @@ body[data-theme="dark"] .theme-toggle {
   background: transparent;
   border: 0;
   box-shadow: none;
-  transition: transform 180ms ease, filter 180ms ease;
-}
-
-.card-btn:hover {
-  transform: translateY(-4px) scale(1.015);
-  filter: saturate(1.04);
 }
 
 .card-face {
@@ -712,53 +678,6 @@ body[data-theme="dark"] .credit-bookmark {
   margin-top: 24px;
   text-align: center;
   background: linear-gradient(145deg, rgba(255, 250, 241, 0.96), rgba(239, 200, 167, 0.9));
-}
-
-.status-panel {
-  background:
-    linear-gradient(135deg, rgba(255, 234, 193, 0.88), rgba(255, 255, 255, 0.72)),
-    var(--panel);
-}
-
-body[data-theme="dark"] .status-panel {
-  background:
-    linear-gradient(135deg, rgba(103, 52, 27, 0.72), rgba(48, 41, 39, 0.92)),
-    var(--panel);
-}
-
-body[data-theme="dark"] .player-item {
-  background: linear-gradient(135deg, rgba(64, 55, 52, 0.88), rgba(44, 39, 37, 0.72));
-}
-
-body[data-theme="dark"] .score-row {
-  background: linear-gradient(135deg, rgba(60, 53, 49, 0.86), rgba(38, 35, 35, 0.72));
-}
-
-body[data-theme="dark"] .pass-device,
-body[data-theme="dark"] .chat-message,
-body[data-theme="dark"] .guide-card {
-  background: linear-gradient(135deg, rgba(58, 51, 48, 0.88), rgba(36, 32, 34, 0.72));
-}
-
-body.gameplay-active .app-shell {
-  width: min(1260px, calc(100% - 28px));
-  padding-top: 18px;
-}
-
-body.gameplay-active .game-area {
-  margin-top: 0;
-}
-
-@keyframes playAreaRise {
-  from {
-    opacity: 0;
-    transform: translateY(14px);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
 }
 
 .winner-panel h2 {
