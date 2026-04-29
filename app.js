@@ -20,7 +20,7 @@ const cardArtMap = {
 };
 
 const state = {
-  mode: "local",
+  mode: "",
   players: [],
   starterIndex: 0,
   activePlayerIndex: 0,
@@ -48,10 +48,15 @@ const state = {
   },
 };
 
-const localTabBtn = document.querySelector("#local-tab");
-const onlineTabBtn = document.querySelector("#online-tab");
+const homeModes = document.querySelector("#home-modes");
+const heroSection = document.querySelector(".hero");
+const guidePanel = document.querySelector(".guide-panel");
+const seoPanel = document.querySelector(".seo-panel");
 const localSection = document.querySelector("#local-section");
 const onlineSection = document.querySelector("#online-section");
+const homeLocalBtn = document.querySelector("#home-local-btn");
+const homeComputerBtn = document.querySelector("#home-computer-btn");
+const homeOnlineBtn = document.querySelector("#home-online-btn");
 const localSetupForm = document.querySelector("#setup-form");
 const gameModeInput = document.querySelector("#game-mode");
 const playerCountInput = document.querySelector("#player-count");
@@ -82,6 +87,7 @@ const roomPlayers = document.querySelector("#room-players");
 const roomHint = document.querySelector("#room-hint");
 const leaveRoomBtn = document.querySelector("#leave-room-btn");
 const gameArea = document.querySelector("#game-area");
+const playModeTitle = document.querySelector("#play-mode-title");
 const winnerPanel = document.querySelector("#winner-panel");
 const winnerTitle = document.querySelector("#winner-title");
 const winnerCopy = document.querySelector("#winner-copy");
@@ -99,9 +105,11 @@ const computerTurn = document.querySelector("#computer-turn");
 const computerTurnCopy = document.querySelector("#computer-turn-copy");
 const cardsContainer = document.querySelector("#cards-container");
 const newGameBtn = document.querySelector("#new-game-btn");
+const backHomeBtn = document.querySelector("#back-home-btn");
 
-localTabBtn.addEventListener("click", () => switchMode("local"));
-onlineTabBtn.addEventListener("click", () => switchMode("online"));
+homeLocalBtn.addEventListener("click", () => openSetupMode("local"));
+homeComputerBtn.addEventListener("click", () => openSetupMode("computer"));
+homeOnlineBtn.addEventListener("click", () => openSetupMode("online"));
 
 localSetupForm.addEventListener("submit", (event) => {
   event.preventDefault();
@@ -167,6 +175,10 @@ leaveRoomBtn.addEventListener("click", () => {
   leaveOnlineRoom();
 });
 
+backHomeBtn.addEventListener("click", () => {
+  returnToHomepage();
+});
+
 themeToggleBtn.addEventListener("click", () => {
   const nextTheme = document.body.dataset.theme === "dark" ? "light" : "dark";
   applyTheme(nextTheme);
@@ -200,14 +212,110 @@ function syncOnlineBotCountLimit() {
   }
 }
 
-function switchMode(mode) {
-  state.mode = mode;
-  localTabBtn.classList.toggle("active", mode === "local");
-  onlineTabBtn.classList.toggle("active", mode === "online");
-  localSection.classList.toggle("hidden", mode !== "local");
-  onlineSection.classList.toggle("hidden", mode !== "online");
-  roomPanel.classList.toggle("hidden", mode !== "online" || !state.remote.roomId);
-  render();
+function openSetupMode(mode) {
+  if (mode === "computer") {
+    gameModeInput.value = "computer";
+    playerCountInput.value = "4";
+    playerCountInput.disabled = true;
+    state.gameMode = "computer";
+    state.mode = "local";
+  } else if (mode === "local") {
+    gameModeInput.value = "local";
+    playerCountInput.disabled = false;
+    state.gameMode = "local";
+    state.mode = "local";
+  } else {
+    state.mode = "online";
+  }
+
+  updateScreenState();
+}
+
+function getScreenState() {
+  const onlineReady = state.mode === "online" && Boolean(state.remote.roomId);
+  const onlinePlaying = onlineReady && (state.remote.status === "playing" || state.remote.status === "finished");
+  const localPlaying = state.mode === "local" && state.players.length > 0;
+
+  if (localPlaying || onlinePlaying) {
+    return "playing";
+  }
+
+  if (state.mode === "online" && onlineReady) {
+    return "waiting";
+  }
+
+  if (state.mode === "local" || state.mode === "online") {
+    return "setup";
+  }
+
+  return "home";
+}
+
+function updateScreenState() {
+  const screenState = getScreenState();
+  const isHome = screenState === "home";
+  const isSetup = screenState === "setup";
+  const isWaiting = screenState === "waiting";
+  const isPlaying = screenState === "playing";
+
+  heroSection.classList.toggle("hidden", !isHome);
+  guidePanel.classList.toggle("hidden", !isHome);
+  seoPanel.classList.toggle("hidden", !isHome);
+  homeModes.classList.toggle("hidden", !isHome);
+
+  localSection.classList.toggle("hidden", !(isSetup && state.mode === "local"));
+  onlineSection.classList.toggle("hidden", !(isSetup && state.mode === "online"));
+  roomPanel.classList.toggle("hidden", !isWaiting);
+  gameArea.classList.toggle("hidden", !isPlaying);
+  winnerPanel.classList.toggle("hidden", !isPlaying || !state.winner);
+
+  if (state.mode === "local") {
+    playModeTitle.textContent = state.gameMode === "computer" ? "Computer Match" : "Local Multiplayer";
+  } else if (state.mode === "online") {
+    playModeTitle.textContent = "Online Room Match";
+  } else {
+    playModeTitle.textContent = "Game Table";
+  }
+
+  newGameBtn.textContent = state.mode === "online" ? "Refresh" : "New Deal";
+}
+
+function returnToHomepage() {
+  clearComputerTurn();
+  stopPolling();
+  state.mode = "";
+  state.players = [];
+  state.winner = null;
+  state.scores = {};
+  state.handRevealed = false;
+  state.gameMode = "local";
+  state.starterIndex = 0;
+  state.activePlayerIndex = 0;
+  state.turnCount = 0;
+  if (state.remote.roomId) {
+    history.replaceState({}, "", window.location.pathname);
+  }
+  leaveOnlineRoomStateOnly();
+  updateScreenState();
+}
+
+function leaveOnlineRoomStateOnly() {
+  state.remote = {
+    roomId: null,
+    playerId: null,
+    playerToken: null,
+    playerName: "",
+    inviteUrl: "",
+    playerCount: 0,
+    botCount: 0,
+    humanCount: 0,
+    cardTypes: [],
+    messages: [],
+    lastSeenMessageId: null,
+    status: "idle",
+    pollTimer: null,
+    isHost: false,
+  };
 }
 
 function applyTheme(theme) {
@@ -428,28 +536,13 @@ function connectToRoom({ roomId, playerId, playerToken, playerName, inviteUrl, p
   state.remote.status = "waiting";
   state.remote.isHost = isHost;
   saveRoomPlayer(roomId, playerId, playerToken, playerName);
-  switchMode("online");
+  updateScreenState();
 }
 
 function leaveOnlineRoom() {
   const currentRoomId = state.remote.roomId;
   stopPolling();
-  state.remote = {
-    roomId: null,
-    playerId: null,
-    playerToken: null,
-    playerName: "",
-    inviteUrl: "",
-    playerCount: 0,
-    botCount: 0,
-    humanCount: 0,
-    cardTypes: [],
-    messages: [],
-    lastSeenMessageId: null,
-    status: "idle",
-    pollTimer: null,
-    isHost: false,
-  };
+  leaveOnlineRoomStateOnly();
   clearSavedRoomPlayer(currentRoomId);
   state.players = [];
   state.winner = null;
@@ -459,7 +552,8 @@ function leaveOnlineRoom() {
   gameArea.classList.add("hidden");
   winnerPanel.classList.add("hidden");
   history.replaceState({}, "", window.location.pathname);
-  switchMode("online");
+  state.mode = "online";
+  updateScreenState();
 }
 
 async function fetchRoomState() {
@@ -548,6 +642,7 @@ function applyRemoteState(data) {
     roomPlayers.appendChild(item);
   });
 
+  updateScreenState();
   render();
 }
 
@@ -823,6 +918,7 @@ function randomNumber(max) {
 
 function render() {
   const isOnline = state.mode === "online" && state.remote.roomId;
+  updateScreenState();
   if (!state.players.length && !isOnline) {
     return;
   }
@@ -1228,11 +1324,13 @@ async function bootstrapRoomFromUrl() {
   const roomId = sanitizeRoomId(new URLSearchParams(window.location.search).get("room") || "");
 
   if (!roomId) {
-    startLocalGame();
+    state.mode = "";
+    updateScreenState();
     return;
   }
 
-  switchMode("online");
+  state.mode = "online";
+  updateScreenState();
   joinRoomCodeInput.value = roomId;
   const saved = getSavedRoomPlayer(roomId);
 
@@ -1259,6 +1357,7 @@ async function bootstrapRoomFromUrl() {
 
   roomPanel.classList.add("hidden");
   roomHint.textContent = "Enter your name and join this room.";
+  updateScreenState();
 }
 
 loadSavedTheme();

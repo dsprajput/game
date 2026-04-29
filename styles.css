@@ -111,10 +111,11 @@ h1 {
   backdrop-filter: blur(12px);
 }
 
-.mode-switch,
+.mode-hub,
 .setup-panel,
 .winner-panel,
 .status-panel,
+.game-toolbar,
 .room-panel,
 .score-panel,
 .chat-panel,
@@ -123,32 +124,93 @@ h1 {
   padding: 24px;
 }
 
-.mode-switch {
-  display: flex;
-  gap: 12px;
-  justify-content: center;
+.mode-hub {
   margin-bottom: 24px;
 }
 
-.mode-btn,
+.mode-card,
 .primary-btn,
 .ghost-btn,
 .card-btn {
   border-radius: 999px;
 }
 
-.mode-btn {
-  padding: 12px 18px;
+.mode-hub-head {
+  align-items: end;
+  margin-bottom: 18px;
+}
+
+.mode-card-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.mode-card {
+  display: grid;
+  gap: 10px;
+  justify-items: start;
+  text-align: left;
+  padding: 22px;
+  border-radius: 24px;
   border: 1px solid var(--border);
   background: rgba(255, 255, 255, 0.74);
   color: var(--ink);
+  min-height: 180px;
 }
 
-.mode-btn.active,
+.mode-card:hover {
+  transform: translateY(-3px);
+}
+
+.mode-card strong {
+  font-size: 1.15rem;
+}
+
+.mode-card span:last-child {
+  color: var(--muted);
+  line-height: 1.55;
+}
+
+.mode-card-icon {
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 18px;
+  font-size: 1.6rem;
+  background: rgba(255, 255, 255, 0.65);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.4);
+}
+
+.mode-card-local {
+  background: linear-gradient(145deg, rgba(255, 235, 211, 0.94), rgba(255, 250, 241, 0.88));
+}
+
+.mode-card-computer {
+  background: linear-gradient(145deg, rgba(228, 241, 255, 0.92), rgba(255, 250, 241, 0.86));
+}
+
+.mode-card-online {
+  background: linear-gradient(145deg, rgba(224, 248, 238, 0.92), rgba(255, 250, 241, 0.86));
+}
+
 .primary-btn {
   background: linear-gradient(135deg, #8f3d1a 0%, var(--accent) 100%);
   color: #fff7ef;
   box-shadow: 0 14px 28px rgba(170, 83, 42, 0.22);
+}
+
+body[data-theme="dark"] .mode-card-local {
+  background: linear-gradient(145deg, rgba(84, 56, 38, 0.94), rgba(43, 38, 38, 0.88));
+}
+
+body[data-theme="dark"] .mode-card-computer {
+  background: linear-gradient(145deg, rgba(46, 61, 81, 0.94), rgba(39, 37, 42, 0.88));
+}
+
+body[data-theme="dark"] .mode-card-online {
+  background: linear-gradient(145deg, rgba(41, 76, 66, 0.94), rgba(38, 37, 42, 0.88));
 }
 
 .setup-panel {
@@ -300,6 +362,10 @@ body[data-theme="dark"] .theme-toggle {
 .game-area {
   display: grid;
   gap: 20px;
+}
+
+.game-toolbar {
+  padding: 18px 22px;
 }
 
 .chat-panel {
@@ -712,7 +778,8 @@ body[data-theme="dark"] .credit-bookmark {
   }
 
   .guide-grid,
-  .faq-grid {
+  .faq-grid,
+  .mode-card-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
@@ -721,12 +788,9 @@ body[data-theme="dark"] .credit-bookmark {
   .online-grid,
   .layout-grid,
   .guide-grid,
-  .faq-grid {
+  .faq-grid,
+  .mode-card-grid {
     grid-template-columns: 1fr;
-  }
-
-  .mode-switch {
-    flex-wrap: wrap;
   }
 
   .hero-topbar {
@@ -778,16 +842,14 @@ body[data-theme="dark"] .credit-bookmark {
     font-size: 0.94rem;
   }
 
-  .mode-switch {
-    gap: 10px;
-    padding: 16px;
-  }
-
-  .mode-btn,
+  .mode-card,
   .primary-btn,
   .ghost-btn {
     width: 100%;
-    justify-content: center;
+  }
+
+  .mode-card {
+    min-height: auto;
   }
 
   .setup-form,

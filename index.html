@@ -34,9 +34,31 @@
       </p>
     </section>
 
-    <section class="mode-switch panel">
-      <button id="local-tab" class="mode-btn active" type="button">Local and Computer</button>
-      <button id="online-tab" class="mode-btn" type="button">Online Room</button>
+    <section id="home-modes" class="mode-hub panel">
+      <div class="panel-head mode-hub-head">
+        <div>
+          <p class="eyebrow">Choose How To Play</p>
+          <h2>Start From The Homepage</h2>
+        </div>
+        <p class="helper-text">Pick a mode first. Cards and scores appear only after you begin the game.</p>
+      </div>
+      <div class="mode-card-grid">
+        <button id="home-local-btn" class="mode-card mode-card-local" type="button">
+          <span class="mode-card-icon">👥</span>
+          <strong>Local Multiplayer</strong>
+          <span>Play with friends on one device.</span>
+        </button>
+        <button id="home-computer-btn" class="mode-card mode-card-computer" type="button">
+          <span class="mode-card-icon">🤖</span>
+          <strong>Computer Play</strong>
+          <span>Play against three computer players.</span>
+        </button>
+        <button id="home-online-btn" class="mode-card mode-card-online" type="button">
+          <span class="mode-card-icon">🌐</span>
+          <strong>Online Room</strong>
+          <span>Create a room or join friends from different devices.</span>
+        </button>
+      </div>
     </section>
 
     <section class="panel guide-panel">
@@ -94,7 +116,7 @@
       </div>
     </section>
 
-    <section id="local-section" class="panel setup-panel">
+    <section id="local-section" class="panel setup-panel hidden">
       <h2>Start a Local Game</h2>
       <form id="setup-form" class="setup-form">
         <label>
@@ -196,6 +218,16 @@
     </section>
 
     <section id="game-area" class="game-area hidden">
+      <section class="panel game-toolbar">
+        <div class="panel-head">
+          <div>
+            <p class="eyebrow">Playing Now</p>
+            <h2 id="play-mode-title">Game Table</h2>
+          </div>
+          <button id="back-home-btn" class="ghost-btn" type="button">Back To Homepage</button>
+        </div>
+      </section>
+
       <section class="panel score-panel">
         <div class="panel-head">
           <h3>Session Score</h3>
