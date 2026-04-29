@@ -54,6 +54,7 @@ const guidePanel = document.querySelector(".guide-panel");
 const seoPanel = document.querySelector(".seo-panel");
 const localSection = document.querySelector("#local-section");
 const onlineSection = document.querySelector("#online-section");
+const onlineSetupGrid = document.querySelector("#online-setup-grid");
 const homeLocalBtn = document.querySelector("#home-local-btn");
 const homeComputerBtn = document.querySelector("#home-computer-btn");
 const homeOnlineBtn = document.querySelector("#home-online-btn");
@@ -264,7 +265,8 @@ function updateScreenState() {
   homeModes.classList.toggle("hidden", !isHome);
 
   localSection.classList.toggle("hidden", !(isSetup && state.mode === "local"));
-  onlineSection.classList.toggle("hidden", !(isSetup && state.mode === "online"));
+  onlineSection.classList.toggle("hidden", !(state.mode === "online" && (isSetup || isWaiting)));
+  onlineSetupGrid.classList.toggle("hidden", !isSetup);
   roomPanel.classList.toggle("hidden", !isWaiting);
   gameArea.classList.toggle("hidden", !isPlaying);
   winnerPanel.classList.toggle("hidden", !isPlaying || !state.winner);
