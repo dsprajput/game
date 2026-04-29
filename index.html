@@ -209,18 +209,19 @@
           <p class="eyebrow">Current Turn</p>
           <h2 id="turn-title">Player 1</h2>
         </div>
-        <div class="status-meta">
-          <span id="starter-badge" class="badge"></span>
-          <span id="exchange-badge" class="badge accent"></span>
-        </div>
+      <div class="status-meta">
+        <span id="starter-badge" class="badge"></span>
+        <span id="exchange-badge" class="badge accent"></span>
+        <button id="game-leave-btn" class="ghost-btn hidden" type="button">Leave Room</button>
       </div>
+    </div>
 
-      <div class="layout-grid">
-        <section class="panel players-panel">
-          <div class="panel-head">
-            <h3>Players</h3>
-            <button id="new-game-btn" class="ghost-btn" type="button">Refresh</button>
-          </div>
+    <div class="layout-grid">
+      <section class="panel players-panel">
+        <div class="panel-head">
+          <h3>Players</h3>
+          <button id="new-game-btn" class="ghost-btn" type="button">Refresh</button>
+        </div>
           <div id="players-list" class="players-list"></div>
         </section>
 

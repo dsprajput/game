@@ -50,6 +50,10 @@ const state = {
 
 const localTabBtn = document.querySelector("#local-tab");
 const onlineTabBtn = document.querySelector("#online-tab");
+const heroSection = document.querySelector(".hero");
+const modeSwitchPanel = document.querySelector(".mode-switch");
+const guidePanel = document.querySelector(".guide-panel");
+const seoPanel = document.querySelector(".seo-panel");
 const localSection = document.querySelector("#local-section");
 const onlineSection = document.querySelector("#online-section");
 const localSetupForm = document.querySelector("#setup-form");
@@ -99,6 +103,7 @@ const computerTurn = document.querySelector("#computer-turn");
 const computerTurnCopy = document.querySelector("#computer-turn-copy");
 const cardsContainer = document.querySelector("#cards-container");
 const newGameBtn = document.querySelector("#new-game-btn");
+const gameLeaveBtn = document.querySelector("#game-leave-btn");
 
 localTabBtn.addEventListener("click", () => switchMode("local"));
 onlineTabBtn.addEventListener("click", () => switchMode("online"));
@@ -164,6 +169,10 @@ copyInviteBtn.addEventListener("click", async () => {
 });
 
 leaveRoomBtn.addEventListener("click", () => {
+  leaveOnlineRoom();
+});
+
+gameLeaveBtn.addEventListener("click", () => {
   leaveOnlineRoom();
 });
 
@@ -823,6 +832,7 @@ function randomNumber(max) {
 
 function render() {
   const isOnline = state.mode === "online" && state.remote.roomId;
+  renderScreenChrome();
   if (!state.players.length && !isOnline) {
     return;
   }
@@ -832,6 +842,30 @@ function render() {
   renderPlayers();
   renderHand();
   renderChat();
+}
+
+function isGameplayFocused() {
+  if (state.mode === "local") {
+    return state.players.length > 0;
+  }
+
+  return state.mode === "online"
+    && Boolean(state.remote.roomId)
+    && (state.remote.status === "playing" || state.remote.status === "finished");
+}
+
+function renderScreenChrome() {
+  const gameplayFocused = isGameplayFocused();
+  document.body.classList.toggle("gameplay-active", gameplayFocused);
+  heroSection.classList.toggle("hidden", gameplayFocused);
+  modeSwitchPanel.classList.toggle("hidden", gameplayFocused);
+  guidePanel.classList.toggle("hidden", gameplayFocused);
+  seoPanel.classList.toggle("hidden", gameplayFocused);
+  localSection.classList.toggle("hidden", state.mode !== "local" || gameplayFocused);
+  onlineSection.classList.toggle("hidden", state.mode !== "online" || gameplayFocused);
+  roomPanel.classList.toggle("hidden", state.mode !== "online" || !state.remote.roomId || gameplayFocused);
+  gameLeaveBtn.classList.toggle("hidden", !(state.mode === "online" && gameplayFocused));
+  newGameBtn.textContent = state.mode === "online" ? "Refresh" : "New Deal";
 }
 
 function renderScores() {
